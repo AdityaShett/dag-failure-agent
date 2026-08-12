@@ -1,0 +1,13 @@
+langgraph
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager
+PyGithub
+chromadb
+fastapi
+uvicorn
+unidiff
