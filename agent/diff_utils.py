@@ -4,6 +4,7 @@ def apply_unified_diff(original_content : str, diff_text : str) -> str:
 
     if diff_text.strip() == "NO_CONFIDENT_FIX":
         return original_content
+    
     path =  PatchSet(diff_text)
     lines = original_content.splitlines(keepends=True)
 

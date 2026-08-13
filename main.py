@@ -24,14 +24,20 @@ async def handle_pubsub_push(request: Request):
 
     print(f"Decoded payload: {payload}")
 
-    result = agent_graph.invoke(
-        {
-            "dag_id": payload.get("dag_id"),
-            "task_id": payload.get("task_id"),
-            "run_id": payload.get("run_id"),
-            "try_number": payload.get("try_number", 1),
-        }
-    )
+    print(f"Repo={payload.get('github_repo')}")
+    print(f"File={payload.get('target_file')}")
+
+    result = agent_graph.invoke({
+
+        "dag_id": payload.get("dag_id"),
+        "task_id": payload.get("task_id"),
+        "run_id": payload.get("run_id"),
+        "try_number": payload.get("try_number", 1),
+
+        "github_repo": payload.get("github_repo"),
+        "target_file": payload.get("target_file"),
+
+    })
 
     print(f"Graph result: {result}")
 

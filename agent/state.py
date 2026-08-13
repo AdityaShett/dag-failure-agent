@@ -7,6 +7,8 @@ class RCAState(TypedDict, total = False):
     try_number : int
     task_logs : str
     dag_source : str
+    github_repo: str
+    target_file: str
     retrieved_knowledge: List[str]
     root_casue : Optional[str]
     proposed_fix : Optional[str]

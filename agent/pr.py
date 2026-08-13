@@ -1,61 +1,87 @@
 import os
-
-from github import Github, Auth
+import uuid
+from github import Auth, Github
 from agent.diff_utils import apply_unified_diff
 
 
 def open_draft_pr(state: dict) -> dict:
     print("ENTERED OPEN_PR")
+
+    print(f"Repo from state: {state['github_repo']}")
+    print(f"Target file from state: {state['target_file']}")
+
     try:
+        # Validate required inputs
+        if not state.get("github_repo"):
+            raise ValueError(
+                "github_repo missing from state"
+            )
+
+        if not state.get("target_file"):
+            raise ValueError(
+                "target_file missing from state"
+            )
+
+        # Connect to GitHub
         auth = Auth.Token(os.environ["GITHUB_TOKEN"])
         gh = Github(auth=auth)
 
-        repo = gh.get_repo("adityashetty-CGEMU/dag-failure-agent")
+        repo = gh.get_repo(state["github_repo"])
+        file_path = state["target_file"]
 
+        print(f"Using repo: {repo.full_name}")
+        print(f"Updating file: {file_path}")
+
+        # Get base branch information
         base_branch = repo.default_branch
         base_sha = repo.get_branch(base_branch).commit.sha
 
         branch_name = (
             f"agent-fix/"
             f"{state['dag_id']}-"
-            f"{state['task_id']}-"
-            f"{state['run_id'][:8]}"
+            f"{uuid.uuid4().hex[:8]}"
         )
 
-        print(f"Using repo: {repo.full_name}")
         print(f"Base branch: {base_branch}")
         print(f"Creating branch: {branch_name}")
 
+        # Create branch
         repo.create_git_ref(
             ref=f"refs/heads/{branch_name}",
             sha=base_sha,
         )
 
-        # Temporary test target because the repository
-        # currently does not contain dags/dag1.py
-        file_path = "dag1.py"
-
-        print(f"Updating file: {file_path}")
-
+        # Load file contents
         contents = repo.get_contents(
             file_path,
             ref=branch_name,
         )
 
+        current_source = contents.decoded_content.decode(
+            "utf-8"
+        )
+
+        # Try applying AI-generated diff
         try:
             patched_source = apply_unified_diff(
-                contents.decoded_content.decode("utf-8"),
+                current_source,
                 state["proposed_fix"],
             )
         except Exception:
-            patched_source = (
-                contents.decoded_content.decode("utf-8")
-                + "\n\n"
-                + "## Agent RCA Test\n"
-                + f"DAG: {state['dag_id']}\n"
-                + f"Task: {state['task_id']}\n"
+            print(
+                "Could not apply diff. "
+                "Falling back to test modification."
             )
 
+            patched_source = (
+                current_source
+                + "\n\n"
+                + "# Agent RCA Test\n"
+                + f"# DAG: {state['dag_id']}\n"
+                + f"# Task: {state['task_id']}\n"
+            )
+
+        # Commit modified file
         repo.update_file(
             path=file_path,
             message=(
@@ -68,19 +94,21 @@ def open_draft_pr(state: dict) -> dict:
             branch=branch_name,
         )
 
+        # Build PR body
         pr_body = (
-            f"## Automated root-cause analysis\n\n"
+            f"## Automated Root Cause Analysis\n\n"
             f"{state.get('root_cause', 'No RCA available')}\n\n"
-            f"## Proposed fix\n"
+            f"## Proposed Fix\n"
             f"```diff\n"
             f"{state.get('proposed_fix', 'NO_FIX')}\n"
             f"```\n\n"
-            f"**This PR was opened automatically. "
-            f"A human must review before merging.**\n\n"
+            f"**This Pull Request was opened automatically. "
+            f"A human review is required before merging.**\n\n"
             f"Run: `{state['run_id']}`\n"
             f"Task: `{state['task_id']}`"
         )
 
+        # Create PR
         pr = repo.create_pull(
             title=(
                 f"[agent] Fix for "
