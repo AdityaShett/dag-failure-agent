@@ -1,11 +1,9 @@
 import json
 
 repo = input("Enter GitHub repository: ").strip()
-target_file = input("Enter target file: ").strip()
 
 config = {
-    "github_repo": repo,
-    "target_file": target_file
+    "github_repo": repo
 }
 
 with open("config.json", "w") as f:

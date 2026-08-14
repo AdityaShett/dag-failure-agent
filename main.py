@@ -11,7 +11,6 @@ api = FastAPI()
 @api.post("/pubsub-push")
 async def handle_pubsub_push(request: Request):
     envelope = await request.json()
-
     print(f"Received envelope: {envelope}")
 
     pubsub_message = envelope["message"]
@@ -22,22 +21,27 @@ async def handle_pubsub_push(request: Request):
 
     payload = json.loads(raw_data)
 
+    dag_id = payload.get("dag_id")
+    github_repo = payload.get("github_repo")
+
+    # Automatically map DAG -> file
+    target_file = f"tests/{dag_id}.py"
+
     print(f"Decoded payload: {payload}")
+    print(f"DAG={dag_id}")
+    print(f"REPO={github_repo}")
+    print(f"FILE={target_file}")
 
-    print(f"Repo={payload.get('github_repo')}")
-    print(f"File={payload.get('target_file')}")
-
-    result = agent_graph.invoke({
-
-        "dag_id": payload.get("dag_id"),
-        "task_id": payload.get("task_id"),
-        "run_id": payload.get("run_id"),
-        "try_number": payload.get("try_number", 1),
-
-        "github_repo": payload.get("github_repo"),
-        "target_file": payload.get("target_file"),
-
-    })
+    result = agent_graph.invoke(
+        {
+            "dag_id": dag_id,
+            "task_id": payload.get("task_id"),
+            "run_id": payload.get("run_id"),
+            "try_number": payload.get("try_number", 1),
+            "github_repo": github_repo,
+            "target_file": target_file,
+        }
+    )
 
     print(f"Graph result: {result}")
 

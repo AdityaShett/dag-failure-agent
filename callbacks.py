@@ -27,9 +27,8 @@ def notify_on_failure(context):
         "run_id": context["run_id"],
         "try_number": ti.try_number,
 
-        # User-configured values
-        "github_repo": config["github_repo"],
-        "target_file": config["target_file"],
+        "github_repo": config["github_repo"]
+
     }
 
     logging.info(f"Failure payload: {message}")

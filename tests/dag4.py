@@ -3,6 +3,11 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import sqlite3
 
+default_args = {
+    "retries": 0
+}
+
+
 def run_query():
 
     conn = sqlite3.connect(":memory:")
@@ -13,7 +18,7 @@ def run_query():
     """)
 
 with DAG(
-    dag_id="sql_failure_dag",
+    dag_id="dag4",
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False
