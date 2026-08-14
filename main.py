@@ -1,5 +1,6 @@
 import base64
 import json
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 
@@ -21,10 +22,26 @@ async def handle_pubsub_push(request: Request):
 
     payload = json.loads(raw_data)
 
+    publish_time = datetime.fromisoformat(
+        pubsub_message["publishTime"].replace("Z", "+00:00")
+    )
+
+    age_minutes = (
+        datetime.now(timezone.utc) - publish_time
+    ).total_seconds() / 60
+
+    # Ignore stale messages older than 10 minutes
+    if age_minutes > 10:
+        print(
+            f"Skipping stale message. "
+            f"Age={age_minutes:.1f} minutes"
+        )
+        return {"status": "stale"}
+
     dag_id = payload.get("dag_id")
     github_repo = payload.get("github_repo")
 
-    # Automatically map DAG -> file
+    # Automatic DAG -> file mapping
     target_file = f"tests/{dag_id}.py"
 
     print(f"Decoded payload: {payload}")
