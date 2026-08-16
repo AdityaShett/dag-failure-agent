@@ -41,9 +41,10 @@ def load_data():
 
     # DELIBERATE BUG
     # Key does not exist and will raise KeyError
-    destination = config["dataset"]
+    destination = config["target_table"]
 
     print(f"Loading into {destination}")
+
 
 
 with DAG(
