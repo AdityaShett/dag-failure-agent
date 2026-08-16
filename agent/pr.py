@@ -118,6 +118,7 @@ def open_draft_pr(state: dict) -> dict:
             body=pr_body,
             head=branch_name,
             base=base_branch,
+            draft= True,
         )
 
         print(f"PR created: {pr.html_url}")

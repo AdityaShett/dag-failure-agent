@@ -1,7 +1,7 @@
+import os
 import base64
 import json
 from datetime import datetime, timezone
-
 from fastapi import FastAPI, Request
 
 from agent.graph import app as agent_graph
@@ -40,6 +40,11 @@ async def handle_pubsub_push(request: Request):
 
     dag_id = payload.get("dag_id")
     github_repo = payload.get("github_repo")
+
+    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "dag1").split(",")
+    if dag_id not in ALLOWED_DAG_IDS:
+        print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
+        return {"status": "ignored_dag"}
 
     # Automatic DAG -> file mapping
     target_file = f"tests/{dag_id}.py"

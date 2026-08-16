@@ -7,7 +7,7 @@ publisher = pubsub_v1.PublisherClient()
 
 topic_path = publisher.topic_path(
     os.environ.get("GCP_PROJECT"),
-    "dag-failures-v2"
+    "dagfailures"
 )
 
 CONFIG_PATH = os.path.join(

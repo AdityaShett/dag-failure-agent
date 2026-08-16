@@ -3,13 +3,9 @@ from agent.state import RCAState
 from agent.nodes import collect_context , retrieve_knowledge, analyze_root_cause, generate_fix
 from agent.pr import open_draft_pr
 
-
-#def route_after_fix(state: RCAState) -> str:
-    #if state.get("proposed_fix", "").strip() == "NO_CONFIDENT_FIX":
-        #return "notify_human_no_fix"
-    #return "open_pr"
-
 def route_after_fix(state: RCAState) -> str:
+    if state.get("proposed_fix", "").strip() == "NO_CONFIDENT_FIX":
+        return "notify_human_no_fix"
     return "open_pr"
 
 def notify_human_no_fix(state : RCAState) -> dict:

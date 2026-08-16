@@ -8,7 +8,7 @@ def apply_unified_diff(original_content : str, diff_text : str) -> str:
     path =  PatchSet(diff_text)
     lines = original_content.splitlines(keepends=True)
 
-    for patched_file in patch:
+    for patched_file in path:
         for hunk in patched_file:
             start = hunk.source_start - 1
             new_lines = [line.value for line in hunk if not line.is_removed]

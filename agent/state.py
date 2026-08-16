@@ -10,7 +10,7 @@ class RCAState(TypedDict, total = False):
     github_repo: str
     target_file: str
     retrieved_knowledge: List[str]
-    root_casue : Optional[str]
+    root_cause : Optional[str]
     proposed_fix : Optional[str]
     confidence : str
     pr_url : Optional[str]
