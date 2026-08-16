@@ -37,13 +37,14 @@ def load_data():
     config = {
         "target_table": "sales_daily",
         "mode": "append",
-    }
 
     # DELIBERATE BUG
     # Key does not exist and will raise KeyError
-    destination = config["dataset"]
+    destination = config["target_table"]
 
     print(f"Loading into {destination}")
+
+
 
 
 with DAG(
