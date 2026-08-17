@@ -76,3 +76,8 @@ with DAG(
     )
 
     extract_task >> transform_task >> load_task >> validation_task
+
+
+# Agent RCA Test
+# DAG: dag1
+# Task: load_data
