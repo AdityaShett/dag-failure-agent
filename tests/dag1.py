@@ -88,3 +88,8 @@ with DAG(
         task_id="aggregate_regions",
         python_callable=aggregate_regions,
     )
+
+
+# Agent RCA Test
+# DAG: dag1
+# Task: aggregate_regions
