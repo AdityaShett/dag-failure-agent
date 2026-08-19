@@ -1,0 +1,2 @@
+GCP_PROJECT: dag-failure-agent-505623
+ALLOWED_DAG_IDS: dag1
