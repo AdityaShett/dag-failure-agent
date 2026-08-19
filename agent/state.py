@@ -14,3 +14,6 @@ class RCAState(TypedDict, total = False):
     proposed_fix : Optional[str]
     confidence : str
     pr_url : Optional[str]
+    llm_confidence: Optional[float]
+    confidence_score: Optional[float]
+    confidence_tier: Optional[str]

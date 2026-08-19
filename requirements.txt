@@ -12,3 +12,4 @@ chromadb
 fastapi
 uvicorn
 unidiff
+langchain-community

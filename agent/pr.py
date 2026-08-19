@@ -1,7 +1,27 @@
 import os
 import uuid
+import json
 from github import Auth, Github
+from google.cloud import storage as gcs_storage
 from agent.diff_utils import apply_unified_diff
+
+_outcomes_client = gcs_storage.Client()
+_OUTCOMES_BUCKET = os.environ.get("OUTCOMES_BUCKET")
+
+
+def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, proposed_fix):
+    if not _OUTCOMES_BUCKET:
+        return
+    bucket = _outcomes_client.bucket(_OUTCOMES_BUCKET)
+    blob = bucket.blob(f"pending/{pr_number}.json")
+    blob.upload_from_string(json.dumps({
+        "pr_number": pr_number,
+        "dag_id": dag_id,
+        "task_id": task_id,
+        "run_id": run_id,
+        "root_cause": root_cause,
+        "proposed_fix": proposed_fix,
+    }))
 
 
 def open_draft_pr(state: dict) -> dict:
@@ -94,7 +114,10 @@ def open_draft_pr(state: dict) -> dict:
             branch=branch_name,
         )
 
-        # Build PR body
+        title_prefix = "[agent]"
+        if state.get("confidence_tier") == "medium":
+            title_prefix = "[agent][low-confidence]"
+
         pr_body = (
             f"## Automated Root Cause Analysis\n\n"
             f"{state.get('root_cause', 'No RCA available')}\n\n"
@@ -102,26 +125,32 @@ def open_draft_pr(state: dict) -> dict:
             f"```diff\n"
             f"{state.get('proposed_fix', 'NO_FIX')}\n"
             f"```\n\n"
+            f"**Confidence score:** {state.get('confidence_score')} "
+            f"({state.get('confidence_tier')})\n\n"
             f"**This Pull Request was opened automatically. "
             f"A human review is required before merging.**\n\n"
             f"Run: `{state['run_id']}`\n"
             f"Task: `{state['task_id']}`"
         )
 
-        # Create PR
         pr = repo.create_pull(
             title=(
-                f"[agent] Fix for "
+                f"{title_prefix} Fix for "
                 f"{state['dag_id']}."
                 f"{state['task_id']} failure"
             ),
             body=pr_body,
             head=branch_name,
             base=base_branch,
-            draft= True,
+            draft=True,
         )
 
         print(f"PR created: {pr.html_url}")
+
+        _record_pending_outcome(
+            pr.number, state["dag_id"], state["task_id"], state["run_id"],
+            state.get("root_cause", ""), state.get("proposed_fix", ""),
+        )
 
         return {
             "pr_url": pr.html_url
