@@ -1,78 +1,50 @@
+"""
+dag-failure-agent — DEMO SCENARIO 1: HIGH CONFIDENCE
+
+This variant is designed to make the agent land in the HIGH confidence tier
+(>= 0.75) and open a normal (non-prefixed) draft PR.
+"""
+
+from __future__ import annotations
+
 from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
 
 from callbacks import notify_on_failure
 
 
+def load_dataset(**context):
+    config = {
+        "dataset": "customer_events",
+        "region": "us-central1",
+        "format": "parquet",
+    }
+
+    # --- BUG (intentional): mistyped dictionary key ---
+    # Should be config["dataset"]; this raises a KeyError every time.
+    dataset_name = config["datset"]
+
+    print(f"Loading dataset: {dataset_name} ({config['format']}) from {config['region']}")
+
+
 default_args = {
-    "owner": "dataops",
-    "retries": 1,
+    "owner": "dag-failure-agent-demo",
+    "retries": 0,  # terminal failure on first attempt — no retry-cycling in the UI
     "on_failure_callback": notify_on_failure,
 }
 
-
-def extract_data():
-    print("Extracting data...")
-
-
-def transform_data():
-    print("Transforming data...")
-
-    records = [
-        {"id": 1, "value": 10},
-        {"id": 2, "value": 20},
-        {"id": 3, "value": 30},
-    ]
-
-    total = sum(r["value"] for r in records)
-    print(f"Total value: {total}")
-
-
-def load_data():
-    print("Loading data...")
-
-    config = {
-        "target_table": "sales_daily",
-        "mode": "append",
-    }
-
-    # DELIBERATE BUG
-    # Key does not exist and will raise KeyError
-    destination = config["target_table"]
-
-    print(f"Loading into {destination}")
-
-
 with DAG(
     dag_id="dag1",
+    description="dag-failure-agent demo — high-confidence scenario (KeyError typo)",
     default_args=default_args,
-    start_date=datetime(2026, 1, 1),
     schedule=None,
+    start_date=datetime(2024, 1, 1),
     catchup=False,
-    tags=["rca-test"],
+    tags=["dag-failure-agent-demo", "high-confidence"],
 ) as dag:
-
-    extract_task = PythonOperator(
-        task_id="extract_data",
-        python_callable=extract_data,
+    test_task = PythonOperator(
+        task_id="test_task",
+        python_callable=load_dataset,
     )
-
-    transform_task = PythonOperator(
-        task_id="transform_data",
-        python_callable=transform_data,
-    )
-
-    load_task = PythonOperator(
-        task_id="load_data",
-        python_callable=load_data,
-    )
-
-    validation_task = BashOperator(
-        task_id="validation",
-        bash_command="echo Validation complete",
-    )
-
-    extract_task >> transform_task >> load_task >> validation_task
