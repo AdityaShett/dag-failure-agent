@@ -1,0 +1,2 @@
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+google.api_core.exceptions.Forbidden: 403 GET https://storage.googleapis.com/storage/v1/b/agent-data/o/output.csv: Access denied

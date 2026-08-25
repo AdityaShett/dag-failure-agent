@@ -41,13 +41,14 @@ async def handle_pubsub_push(request: Request):
     dag_id = payload.get("dag_id")
     github_repo = payload.get("github_repo")
 
-    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "dag1").split(",")
+    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "dag1,dag2,dag3").split(",")
     if dag_id not in ALLOWED_DAG_IDS:
         print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
         return {"status": "ignored_dag"}
 
-    # Automatic DAG -> file mapping
-    target_file = f"tests/{dag_id}.py"
+    # Use target_file from payload if provided (e.g. synthetic/manual test
+    # runs), otherwise fall back to the automatic DAG -> file mapping.
+    target_file = payload.get("target_file") or f"tests/{dag_id}.py"
 
     print(f"Decoded payload: {payload}")
     print(f"DAG={dag_id}")
@@ -62,6 +63,7 @@ async def handle_pubsub_push(request: Request):
             "try_number": payload.get("try_number", 1),
             "github_repo": github_repo,
             "target_file": target_file,
+            "synthetic_task_logs": payload.get("synthetic_task_logs"),
         }
     )
 

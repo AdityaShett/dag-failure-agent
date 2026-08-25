@@ -6,6 +6,7 @@ from agent.nodes import (
     analyze_root_cause,
     generate_fix,
     compute_confidence,
+    _mark_confidence_no_pr,
 )
 from agent.pr import open_draft_pr
 
@@ -17,7 +18,6 @@ def route_after_fix(state: RCAState) -> str:
         return "notify_human_no_fix"
     return "open_pr"
 
-
 def notify_human_no_fix(state: RCAState) -> dict:
     print(
         f"NOTIFY: dag={state.get('dag_id')} task={state.get('task_id')} "
@@ -25,8 +25,8 @@ def notify_human_no_fix(state: RCAState) -> dict:
         f"tier={state.get('confidence_tier')}\n"
         f"root_cause={state.get('root_cause')}"
     )
+    _mark_confidence_no_pr(state.get("confidence_record_id"))   # add this line
     return {}
-
 
 graph = StateGraph(RCAState)
 graph.add_node("collect_context", collect_context)

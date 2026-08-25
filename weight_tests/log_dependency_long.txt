@@ -1,0 +1,13 @@
+﻿[2026-08-25, 10:00:00] INFO - Task started
+[2026-08-25, 10:00:02] INFO - Waiting for upstream task extract_data
+[2026-08-25, 10:00:30] INFO - Upstream task extract_data marked as success
+[2026-08-25, 10:00:31] INFO - Reading extracted file from GCS
+[2026-08-25, 10:00:33] WARNING - File output/extract_data.csv is empty (0 bytes)
+[2026-08-25, 10:00:33] INFO - Proceeding with empty dataset
+[2026-08-25, 10:00:34] INFO - Running transform step
+[2026-08-25, 10:00:36] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag4.py", line 61, in transform
+    df = df.set_index("id")
+KeyError: "None of ['id'] are in the columns"
+[2026-08-25, 10:00:36] INFO - Upstream task extract_data silently produced no data

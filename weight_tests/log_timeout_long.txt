@@ -1,0 +1,10 @@
+﻿[2026-08-25, 10:00:00] INFO - Task started
+[2026-08-25, 10:00:05] INFO - Connecting to upstream service
+[2026-08-25, 10:00:10] INFO - Waiting for response...
+[2026-08-25, 10:01:10] WARNING - No response after 60s, retrying (1/5)
+[2026-08-25, 10:02:10] WARNING - No response after 60s, retrying (2/5)
+[2026-08-25, 10:03:10] WARNING - No response after 60s, retrying (3/5)
+[2026-08-25, 10:04:10] WARNING - No response after 60s, retrying (4/5)
+[2026-08-25, 10:05:10] WARNING - No response after 60s, retrying (5/5)
+[2026-08-25, 10:05:10] ERROR - Max retries exceeded
+[2026-08-25, 10:05:10] ERROR - airflow.exceptions.AirflowTaskTimeout: Task exceeded execution_timeout of 300s

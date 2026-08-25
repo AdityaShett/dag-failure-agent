@@ -1,0 +1,5 @@
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag2.py", line 5, in <module>
+    import pandas_extra_utils
+ModuleNotFoundError: No module named 'pandas_extra_utils'

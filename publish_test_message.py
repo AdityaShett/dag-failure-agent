@@ -1,18 +1,24 @@
-import json
-import uuid
+import json, sys, uuid
 from google.cloud import pubsub_v1
 
 publisher = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path("dag-failure-agent-505623", "dagfailures")
 
-payload = {
-    "dag_id": "dag1",
-    "task_id": "test_task",
-    "run_id": f"e2e-test-{uuid.uuid4().hex[:8]}",
-    "try_number": 1,
-    "github_repo": "AdityaShett/dag-failure-agent",
-}
+def publish(dag_id, task_id, target_file, logs):
+    payload = {
+        "dag_id": dag_id,
+        "task_id": task_id,
+        "run_id": f"e2e-test-{uuid.uuid4().hex[:8]}",
+        "try_number": 1,
+        "github_repo": "AdityaShett/dag-failure-agent",
+        "target_file": target_file,
+        "synthetic_task_logs": logs,
+    }
+    future = publisher.publish(topic_path, json.dumps(payload).encode("utf-8"))
+    print(f"[{dag_id}.{task_id}] run_id={payload['run_id']} msg_id={future.result()}")
 
-future = publisher.publish(topic_path, json.dumps(payload).encode("utf-8"))
-print(f"Published message ID: {future.result()}")
-print(f"run_id used: {payload['run_id']}")
+if __name__ == "__main__":
+    dag_id, task_id, target_file, log_file = sys.argv[1:5]
+    with open(log_file) as f:
+        logs = f.read()
+    publish(dag_id, task_id, target_file, logs)

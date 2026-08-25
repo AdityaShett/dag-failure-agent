@@ -1,0 +1,5 @@
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag1.py", line 42, in transform
+    value = row["colum_name"]
+KeyError: 'colum_name'

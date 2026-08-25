@@ -2,3 +2,4 @@ GCP_PROJECT: dag-failure-agent-505623
 GCP_LOCATION: us-central1
 DEDUP_BUCKET: dag-failure-agent-505623-dedup
 OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+BQ_DATASET: dag_failure_agent

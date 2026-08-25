@@ -1,2 +1,3 @@
 GCP_PROJECT: dag-failure-agent-505623
 OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+BQ_DATASET: dag_failure_agent

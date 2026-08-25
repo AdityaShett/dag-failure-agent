@@ -8,7 +8,7 @@ google-cloud-storage
 google-cloud-pubsub
 google-cloud-secret-manager
 PyGithub
-chromadb
+google-cloud-bigquery
 fastapi
 uvicorn
 unidiff

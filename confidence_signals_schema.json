@@ -1,0 +1,17 @@
+[
+  {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "dag_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "task_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "run_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "s_llm", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_retrieval", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_history", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_logs", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_source", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "confidence_score", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "confidence_tier", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "pr_number", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "outcome", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+  {"name": "updated_at", "type": "TIMESTAMP", "mode": "NULLABLE"}
+]

@@ -1,12 +1,32 @@
 import os
 import re
 import json
+import uuid
+from datetime import datetime, timezone
+
+from google.cloud import bigquery
+from google.cloud import storage as gcs_storage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from tools.context import fetch_task_logs, fetch_dag_source
 
+
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "global")
+BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+BQ_TABLE = f"{PROJECT_ID}.{BQ_DATASET}.fix_history"
+CONFIDENCE_SIGNALS_TABLE = f"{PROJECT_ID}.{BQ_DATASET}.confidence_signals"
+
+_bq_client = None
+_outcomes_client_for_history = None
+
+
+def _get_bq_client():
+    global _bq_client
+    if _bq_client is None:
+        _bq_client = bigquery.Client(project=PROJECT_ID)
+    return _bq_client
+
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-pro",
@@ -19,11 +39,14 @@ llm = ChatGoogleGenerativeAI(
 
 
 def collect_context(state: dict) -> dict:
-    logs = fetch_task_logs(
-        state["dag_id"],
-        state["task_id"],
-        state["run_id"]
-    )
+    if state.get("synthetic_task_logs") is not None:
+        logs = state["synthetic_task_logs"]
+    else:
+        logs = fetch_task_logs(
+            state["dag_id"],
+            state["task_id"],
+            state["run_id"]
+        )
 
     source = fetch_dag_source(
         state["dag_id"],
@@ -37,102 +60,53 @@ def collect_context(state: dict) -> dict:
     }
 
 
-import time
-
-_kb_store = None
-_kb_loaded_at = 0.0
-_KB_TTL_SECONDS = 900  
-
-def _load_knowledge_base():
-    global _kb_store, _kb_loaded_at
-
-    now = time.time()
-    if _kb_store is not None and (now - _kb_loaded_at) < _KB_TTL_SECONDS:
-        return _kb_store
-
-    bucket_name = os.environ.get("OUTCOMES_BUCKET")
-    if not bucket_name:
-        return None
-
-    try:
-        from google.cloud import storage as gcs_storage
-        from langchain_community.vectorstores import Chroma
-        from langchain_google_vertexai import VertexAIEmbeddings
-        from langchain_core.documents import Document
-
-        client = gcs_storage.Client()
-        bucket = client.bucket(bucket_name)
-        blobs = list(bucket.list_blobs(prefix="history/"))
-
-        documents = []
-        for blob in blobs:
-            if not blob.name.endswith(".json"):
-                continue
-            try:
-                record = json.loads(blob.download_as_text())
-            except Exception:
-                continue
-
-            if not record.get("merged"):
-                continue
-
-            root_cause = record.get("root_cause", "")
-            proposed_fix = record.get("proposed_fix", "")
-            if not root_cause and not proposed_fix:
-                continue
-
-            content = f"Root cause:\n{root_cause}\n\nFix:\n{proposed_fix}"
-            documents.append(Document(
-                page_content=content,
-                metadata={
-                    "dag_id": record.get("dag_id", ""),
-                    "task_id": record.get("task_id", ""),
-                    "pr_number": record.get("pr_number", 0),
-                },
-            ))
-
-        if not documents:
-            _kb_store = None
-            _kb_loaded_at = now
-            return None
-
-        embeddings = VertexAIEmbeddings(
-            model_name="text-embedding-005",
-            project=PROJECT_ID,
-            location=LOCATION,
-        )
-
-        store = Chroma.from_documents(documents, embedding=embeddings)
-        _kb_store = store
-        _kb_loaded_at = now
-        print(f"Knowledge base rebuilt: {len(documents)} merged-fix document(s)")
-        return store
-
-    except Exception as e:
-        print(f"WARNING: failed to build knowledge base: {e!r}")
-        return None
-
-
 def retrieve_knowledge(state: dict) -> dict:
     try:
-        store = _load_knowledge_base()
-        if store is None:
-            return {"retrieved_knowledge": []}
+        from langchain_google_vertexai import VertexAIEmbeddings
 
-        query = (
+        embeddings = VertexAIEmbeddings(model_name="text-embedding-005")
+
+        query_text = (
             f"Airflow failure: {state['task_id']} "
             f"in {state['dag_id']}. "
             f"Logs: {state.get('task_logs', '')[-1500:]}"
         )
 
-        hits = store.similarity_search(query, k=5)
+        query_embedding = embeddings.embed_query(query_text)
 
-        return {
-            "retrieved_knowledge": [h.page_content for h in hits]
-        }
+        client = _get_bq_client()
+
+        sql = f"""
+            SELECT
+                root_cause,
+                proposed_fix,
+                outcome,
+                ML.DISTANCE(embedding, @query_embedding, 'COSINE') AS distance
+            FROM `{BQ_TABLE}`
+            WHERE outcome = 'merged'
+            ORDER BY distance ASC
+            LIMIT 5
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ArrayQueryParameter(
+                    "query_embedding", "FLOAT64", query_embedding
+                )
+            ]
+        )
+
+        results = client.query(sql, job_config=job_config).result()
+
+        hits = [
+            f"Root cause: {row.root_cause}\nFix: {row.proposed_fix}"
+            for row in results
+        ]
+
+        return {"retrieved_knowledge": hits}
 
     except Exception as e:
-        print(f"WARNING: retrieve_knowledge failed: {e!r}")
+        print(f"BigQuery retrieval failed: {e}")
         return {"retrieved_knowledge": []}
 
 
@@ -241,6 +215,7 @@ def generate_fix(state: dict) -> dict:
             "llm_confidence": 0.0,
         }
 
+
 CONFIDENCE_WEIGHTS = {
     "llm": 0.35,
     "retrieval": 0.20,
@@ -249,9 +224,6 @@ CONFIDENCE_WEIGHTS = {
     "source": 0.10,
 }
 
-from google.cloud import storage as gcs_storage
-
-_outcomes_client_for_history = None
 
 def _fetch_history_score(dag_id: str, task_id: str) -> float:
     global _outcomes_client_for_history
@@ -281,6 +253,59 @@ def _fetch_history_score(dag_id: str, task_id: str) -> float:
 
     return merged_count / len(blobs)
 
+
+def _log_confidence_signals(state: dict, signals: dict, score: float, tier: str) -> str:
+    """Logs every scored run (not just ones that open a PR) to BigQuery for
+    later empirical weight derivation. Returns record_id so it can be
+    carried forward into the pending PR record for outcome linking."""
+    record_id = str(uuid.uuid4())
+
+    row = {
+        "record_id": record_id,
+        "dag_id": state.get("dag_id", ""),
+        "task_id": state.get("task_id", ""),
+        "run_id": state.get("run_id", ""),
+        "s_llm": signals.get("s_llm"),
+        "s_retrieval": signals.get("s_retrieval"),
+        "s_history": signals.get("s_history"),
+        "s_logs": signals.get("s_logs"),
+        "s_source": signals.get("s_source"),
+        "confidence_score": score,
+        "confidence_tier": tier,
+        "pr_number": None,
+        "outcome": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": None,
+    }
+
+    try:
+        errors = _get_bq_client().insert_rows_json(CONFIDENCE_SIGNALS_TABLE, [row])
+        if errors:
+            print(f"WARNING: confidence_signals insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to log confidence signals: {e!r}")
+
+    return record_id
+
+def _mark_confidence_no_pr(record_id: str):
+    if not record_id:
+        return
+    row = {
+        "record_id": record_id,
+        "outcome": "no_pr",
+        "pr_number": None,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    table = f"{PROJECT_ID}.{BQ_DATASET}.confidence_outcomes"
+    try:
+        errors = _get_bq_client().insert_rows_json(table, [row])
+        if errors:
+            print(f"WARNING: confidence_outcomes insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to record no_pr outcome: {e!r}")
+
+
+
 def compute_confidence(state: dict) -> dict:
     llm_confidence = state.get("llm_confidence", 0.0)
 
@@ -298,9 +323,6 @@ def compute_confidence(state: dict) -> dict:
     dag_source = state.get("dag_source", "") or ""
     s_source = 1.0 if len(dag_source) > 50 else 0.0
 
-    # No PR-outcome tracking exists yet (would need a webhook on PR
-    # merge/close to know if past fixes were actually accepted), so
-    # this stays a neutral placeholder until that's built.
     s_history = _fetch_history_score(state.get("dag_id"), state.get("task_id"))
 
     score = (
@@ -318,7 +340,18 @@ def compute_confidence(state: dict) -> dict:
     else:
         tier = "low"
 
+    signals = {
+        "s_llm": llm_confidence,
+        "s_retrieval": s_retrieval,
+        "s_history": s_history,
+        "s_logs": s_logs,
+        "s_source": s_source,
+    }
+
+    record_id = _log_confidence_signals(state, signals, round(score, 3), tier)
+
     return {
         "confidence_score": round(score, 3),
         "confidence_tier": tier,
+        "confidence_record_id": record_id,
     }

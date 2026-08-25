@@ -1,0 +1,11 @@
+[
+  {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "dag_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "task_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "run_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "root_cause", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "proposed_fix", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "outcome", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+  {"name": "embedding", "type": "FLOAT64", "mode": "REPEATED"}
+]
