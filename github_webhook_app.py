@@ -125,7 +125,8 @@ async def healthz():
 def _update_confidence_outcome(record: dict, pr_number: int, merged: bool):
     record_id = record.get("confidence_record_id")
     if not record_id:
-        return
+        return  # older record from before this instrumentation existed
+
     row = {
         "record_id": record_id,
         "outcome": "merged" if merged else "rejected",
