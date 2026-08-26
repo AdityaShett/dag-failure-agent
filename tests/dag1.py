@@ -63,3 +63,8 @@ with DAG(
 # Agent RCA Test
 # DAG: dag1
 # Task: task_a
+
+
+# Agent RCA Test
+# DAG: totally_new_dag
+# Task: task_a
