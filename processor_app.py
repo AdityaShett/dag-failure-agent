@@ -41,7 +41,10 @@ async def process(request: Request):
 
     dag_id = payload.get("dag_id")
     github_repo = payload.get("github_repo")
-    target_file = f"tests/{dag_id}.py"
+
+    # Use target_file from payload if provided (e.g. synthetic/manual test
+    # runs), otherwise fall back to the automatic DAG -> file mapping.
+    target_file = payload.get("target_file") or f"tests/{dag_id}.py"
 
     print(f"Processing: DAG={dag_id} REPO={github_repo} FILE={target_file}")
 
@@ -53,6 +56,7 @@ async def process(request: Request):
             "try_number": payload.get("try_number", 1),
             "github_repo": github_repo,
             "target_file": target_file,
+            "synthetic_task_logs": payload.get("synthetic_task_logs"),
         }
     )
 

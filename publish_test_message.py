@@ -2,7 +2,7 @@ import json, sys, uuid
 from google.cloud import pubsub_v1
 
 publisher = pubsub_v1.PublisherClient()
-topic_path = publisher.topic_path("dag-failure-agent-505623", "dagfailures")
+topic_path = publisher.topic_path("dag-failure-agent-505623", "dagfailures-processing")
 
 def publish(dag_id, task_id, target_file, logs):
     payload = {

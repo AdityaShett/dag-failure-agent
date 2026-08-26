@@ -41,8 +41,8 @@ async def handle_pubsub_push(request: Request):
     dag_id = payload.get("dag_id")
     github_repo = payload.get("github_repo")
 
-    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "dag1,dag2,dag3").split(",")
-    if dag_id not in ALLOWED_DAG_IDS:
+    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "").split(",") if os.environ.get("ALLOWED_DAG_IDS") else None
+    if ALLOWED_DAG_IDS and dag_id not in ALLOWED_DAG_IDS:
         print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
         return {"status": "ignored_dag"}
 

@@ -13,7 +13,7 @@ processing_topic_path = publisher.topic_path(
     os.environ["GCP_PROJECT"], "dagfailures-processing"
 )
 
-ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "dag1").split(",")
+ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "").split(",") if os.environ.get("ALLOWED_DAG_IDS") else None
 
 
 @app.post("/pubsub-push")
@@ -34,7 +34,7 @@ async def receive(request: Request):
         return {"status": "stale"}
 
     dag_id = payload.get("dag_id")
-    if dag_id not in ALLOWED_DAG_IDS:
+    if ALLOWED_DAG_IDS and dag_id not in ALLOWED_DAG_IDS:
         print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
         return {"status": "ignored_dag"}
 
