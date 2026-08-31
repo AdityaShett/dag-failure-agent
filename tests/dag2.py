@@ -28,5 +28,5 @@ with DAG("dag2", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     # --- BUG (intentional): merge_partitions and validate_schema both depend only on
     # fetch_upstream_partition, so Airflow can run them in parallel — merge_partitions
     # sometimes wins the race and reads a .validated file that doesn't exist yet.
-    t1 >> [t2, t3]
+    t1 >> t2 >> t3
     t3 >> t4
