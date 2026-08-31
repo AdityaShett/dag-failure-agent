@@ -4,7 +4,7 @@ from datetime import datetime
 
 # --- BUG (intentional): bucket belongs to a different project than this DAG's
 # service account has storage.objectCreator on ---
-REPORT_BUCKET = "gs://dag-failure-agent-505623-archive-legacy/"
+REPORT_BUCKET = "gs://dag-failure-agent-505623-archive/"
 
 def extract_reporting_data(**context):
     context["ti"].xcom_push(key="report_path", value="/tmp/report_2026_08_30.csv")
