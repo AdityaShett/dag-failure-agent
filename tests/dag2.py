@@ -26,7 +26,7 @@ with DAG(
 ) as dag:
 
     PythonOperator(
-        task_id="read_file",
+        task_id="test_task_0",
         python_callable=read_file,
     )
 
