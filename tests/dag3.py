@@ -8,7 +8,7 @@ def extract_api_data(**context):
 def normalize_records(**context):
     # --- BUG (intentional): module was renamed from date_helpers to datetime_helpers
     # in a refactor; this import was never updated ---
-    from utils.date_helpers import parse_ts
+    from utils.datetime_helpers import parse_ts
     records = context["ti"].xcom_pull(key="records", task_ids="extract_api_data")
     for r in records:
         r["ts"] = parse_ts(r["ts"])
