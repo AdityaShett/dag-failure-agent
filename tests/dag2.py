@@ -30,3 +30,7 @@ with DAG("dag2", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     # sometimes wins the race and reads a .validated file that doesn't exist yet.
     t1 >> [t2, t3]
     t3 >> t4
+
+# Agent RCA Test
+# DAG: dag2
+# Task: merge_partitions
