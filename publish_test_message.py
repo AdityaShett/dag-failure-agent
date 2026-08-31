@@ -4,13 +4,13 @@ from google.cloud import pubsub_v1
 publisher = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path("dag-failure-agent-505623", "dagfailures-processing")
 
-def publish(dag_id, task_id, target_file, logs):
+def publish(dag_id, task_id, target_file, logs, github_repo="AdityaShett/dag-failure-agent"):
     payload = {
         "dag_id": dag_id,
         "task_id": task_id,
         "run_id": f"e2e-test-{uuid.uuid4().hex[:8]}",
         "try_number": 1,
-        "github_repo": "AdityaShett/dag-failure-agent",
+        "github_repo": github_repo,
         "target_file": target_file,
         "synthetic_task_logs": logs,
     }
