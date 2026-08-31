@@ -9,7 +9,7 @@ def extract_source_data(**context):
 
 def load_dataset(**context):
     # --- BUG (intentional): mistyped dictionary key ---
-    dataset_name = CONFIG["datset"]  # should be CONFIG["dataset"]
+    dataset_name = CONFIG["dataset"]  # should be CONFIG["dataset"]
     print(f"Loading dataset: {dataset_name} ({CONFIG['format']}) from {CONFIG['region']}")
 
 def transform_dataset(**context):
