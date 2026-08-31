@@ -25,3 +25,7 @@ with DAG("dag5", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     t2 = PythonOperator(task_id="write_report_to_gcs", python_callable=write_report_to_gcs)
     t3 = PythonOperator(task_id="archive_source", python_callable=archive_source)
     t1 >> t2 >> t3
+
+# Agent RCA Test
+# DAG: dag5
+# Task: write_report_to_gcs
