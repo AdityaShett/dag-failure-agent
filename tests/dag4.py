@@ -31,6 +31,6 @@ with DAG(
 ) as dag:
 
     PythonOperator(
-        task_id="run_query",
+        task_id="enrich_with_scores",
         python_callable=run_query,
     )
