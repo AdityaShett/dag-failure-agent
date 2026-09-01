@@ -1,0 +1,8 @@
+[2026-08-31 09:12:03] INFO - Task load_dataset starting for dag1
+[2026-08-31 09:12:04] INFO - Reading source table users_raw
+[2026-08-31 09:12:05] ERROR - Traceback (most recent call last):
+[2026-08-31 09:12:05] ERROR -   File "dag1.py", line 11, in load_dataset
+[2026-08-31 09:12:05] ERROR -     df['user_id']
+[2026-08-31 09:12:05] ERROR - KeyError: 'user_id'
+[2026-08-31 09:12:05] ERROR - Task failed with exception
+[2026-08-31 09:12:05] INFO - Note: upstream table users_raw renamed column user_id -> uid in the 2026-08-28 migration

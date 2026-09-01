@@ -1,0 +1,9 @@
+[2026-08-31 10:02:11] INFO - Task enrich_with_scores starting for dag4
+[2026-08-31 10:02:15] INFO - Batch 1/4 enriched successfully
+[2026-08-31 10:02:19] WARNING - Retry 1 for external scoring service (timeout)
+[2026-08-31 10:02:24] INFO - Batch 2/4 enriched successfully
+[2026-08-31 10:02:31] WARNING - Retry 2 for external scoring service (timeout)
+[2026-08-31 10:02:40] ERROR - Task failed after 3 retries
+[2026-08-31 10:02:40] ERROR - Exception raised but no stack trace captured (logger misconfigured on this attempt)
+[2026-08-31 10:02:41] INFO - Batch 3/4 enriched successfully after task was already marked failed
+[2026-08-31 10:02:44] WARNING - Scoring service status page shows no reported incident during this window

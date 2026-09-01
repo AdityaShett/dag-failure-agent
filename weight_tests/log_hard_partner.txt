@@ -1,0 +1,6 @@
+[2026-08-31 11:15:02] INFO - Task call_partner_api starting for dag6
+[2026-08-31 11:15:09] ERROR - Partner API returned 500 Internal Server Error
+[2026-08-31 11:15:09] ERROR - Response body: {"error":"internal_error","request_id":"a91f-3d2c"}
+[2026-08-31 11:15:09] INFO - No further detail available from partner; their status page shows no reported outage
+[2026-08-31 11:15:10] ERROR - Task failed
+[2026-08-31 11:15:11] INFO - Same endpoint succeeded on retry 40 minutes later with no code or config changes in between

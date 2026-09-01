@@ -9,6 +9,7 @@ class RCAState(TypedDict, total=False):
     dag_source: str
     github_repo: str
     target_file: str
+    synthetic_task_logs: Optional[str]
     retrieved_knowledge: List[str]
     root_cause: Optional[str]
     proposed_fix: Optional[str]

@@ -1,0 +1,7 @@
+[2026-08-31 09:20:11] INFO - Task merge_partitions starting for dag2
+[2026-08-31 09:20:12] INFO - Resolving partition path for ds=2026-08-31
+[2026-08-31 09:20:12] ERROR - Traceback (most recent call last):
+[2026-08-31 09:20:12] ERROR -   File "dag2.py", line 14, in merge_partitions
+[2026-08-31 09:20:12] ERROR -     path = f'{base}/{ds}'
+[2026-08-31 09:20:12] ERROR - FileNotFoundError: gs://bucket/2026-08-31/part-000.parquet not found
+[2026-08-31 09:20:12] INFO - Note: partitions are actually written using ds_nodash (20260831), not ds

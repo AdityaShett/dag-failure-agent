@@ -1,0 +1,7 @@
+[2026-08-31 09:31:40] INFO - Task normalize_records starting for dag3
+[2026-08-31 09:31:41] INFO - Processing batch of 1000 records
+[2026-08-31 09:31:41] ERROR - Traceback (most recent call last):
+[2026-08-31 09:31:41] ERROR -   File "dag3.py", line 8, in normalize_records
+[2026-08-31 09:31:41] ERROR -     value.strip()
+[2026-08-31 09:31:41] ERROR - AttributeError: 'NoneType' object has no attribute 'strip'
+[2026-08-31 09:31:41] INFO - Note: record 412 had a null 'notes' field, first null seen in this field in 3 months

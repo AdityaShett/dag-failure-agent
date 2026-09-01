@@ -1,0 +1,7 @@
+[2026-08-31 10:40:02] INFO - Task write_report_to_gcs starting for dag5
+[2026-08-31 10:40:05] INFO - Report generated, 4.2MB, beginning upload
+[2026-08-31 10:41:35] WARNING - Upload slower than expected (90s elapsed)
+[2026-08-31 10:42:05] ERROR - Task failed: upload did not complete within timeout
+[2026-08-31 10:42:05] INFO - GCS bucket metrics show normal latency during this window
+[2026-08-31 10:42:06] INFO - No errors logged on the storage client side; task-level timeout was hit first
+[2026-08-31 10:42:07] WARNING - This task has intermittently failed 2 of the last 10 runs with the same symptom
