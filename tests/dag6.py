@@ -16,7 +16,3 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-    t1 = PythonOperator(task_id="call_partner_api", python_callable=call_partner_api)
-    t2 = PythonOperator(task_id="parse_response", python_callable=parse_response)
-    t3 = PythonOperator(task_id="store_result", python_callable=store_result)
-    t1 >> t2 >> t3
