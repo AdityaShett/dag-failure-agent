@@ -24,3 +24,7 @@ with DAG("dag1", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     t3 = PythonOperator(task_id="transform_dataset", python_callable=transform_dataset)
     t4 = PythonOperator(task_id="aggregate_regions", python_callable=aggregate_regions)
     t1 >> t2 >> t3 >> t4
+
+# Agent RCA Test
+# DAG: dag1
+# Task: load_dataset_easy
