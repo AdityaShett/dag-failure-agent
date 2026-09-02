@@ -22,3 +22,7 @@ with DAG("dag3", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     t2 = PythonOperator(task_id="normalize_records", python_callable=normalize_records)
     t3 = PythonOperator(task_id="load_to_warehouse", python_callable=load_to_warehouse)
     t1 >> t2 >> t3
+
+# Agent RCA Test
+# DAG: dag3
+# Task: normalize_records_easy
