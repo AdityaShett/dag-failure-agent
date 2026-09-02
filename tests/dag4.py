@@ -22,3 +22,7 @@ with DAG("dag4", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) 
     t2 = PythonOperator(task_id="enrich_with_scores", python_callable=enrich_with_scores)
     t3 = PythonOperator(task_id="flag_high_risk", python_callable=flag_high_risk)
     t1 >> t2 >> t3
+
+# Agent RCA Test
+# DAG: dag4
+# Task: enrich_with_scores
