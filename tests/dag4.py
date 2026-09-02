@@ -10,7 +10,7 @@ def fetch_customer_profile(**context):
 def enrich_with_scores(**context):
     profile = context["ti"].xcom_pull(key="profile", task_ids="fetch_customer_profile")
     # --- BUG (intentional): assumes preferences is always a dict, never checks for None ---
-    if "marketing_opt_in" in profile["preferences"]:
+    if profile["preferences"] and "marketing_opt_in" in profile["preferences"]:
         profile["scores"]["marketing_eligible"] = True
     context["ti"].xcom_push(key="enriched", value=profile)
 
