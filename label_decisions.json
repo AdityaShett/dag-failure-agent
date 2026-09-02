@@ -1,365 +1,181 @@
 {
-  "119": {
-    "title": "[agent][medium-confidence] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "118": {
-    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "117": {
-    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "116": {
-    "title": "[agent][medium-confidence] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "105": {
-    "title": "[agent][medium-confidence] Fix for dag2.merge_partitions failure",
-    "verdict": "merged"
-  },
-  "103": {
-    "title": "[agent][medium-confidence] Fix for dag3.normalize_records failure",
-    "verdict": "merged"
-  },
-  "101": {
-    "title": "[agent][medium-confidence] Fix for dag1.load_dataset failure",
-    "verdict": "merged"
-  },
-  "95": {
-    "title": "[agent][medium-confidence] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "93": {
-    "title": "[agent][medium-confidence] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "merged"
-  },
-  "90": {
-    "title": "[agent][medium-confidence] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "82": {
-    "title": "[agent][medium-confidence] Fix for dag3.normalize_records failure",
-    "verdict": "merged"
-  },
-  "79": {
-    "title": "[agent][medium-confidence] Fix for dag3.normalize_records failure",
-    "verdict": "merged"
-  },
-  "76": {
-    "title": "[agent][medium-confidence] Fix for dag1.load_dataset failure",
-    "verdict": "merged"
-  },
-  "74": {
-    "title": "[agent][medium-confidence] Fix for dag1.load_dataset failure",
-    "verdict": "merged"
-  },
-  "163": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions_easy failure",
-    "verdict": "closed"
-  },
-  "162": {
+  "208": {
     "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api_hard failure",
     "verdict": "closed"
   },
-  "161": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
-    "verdict": "closed"
-  },
-  "160": {
-    "title": "[agent] Fix for dag6.call_partner_api_hard failure",
-    "verdict": "closed"
-  },
-  "159": {
+  "207": {
     "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
     "verdict": "closed"
   },
-  "158": {
-    "title": "[agent] Fix for dag6.call_partner_api_hard failure",
-    "verdict": "closed"
-  },
-  "157": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
-    "verdict": "closed"
-  },
-  "156": {
-    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
-    "verdict": "closed"
-  },
-  "155": {
+  "206": {
     "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api_hard failure",
     "verdict": "closed"
   },
-  "154": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
+  "205": {
+    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api_hard failure",
     "verdict": "closed"
   },
-  "153": {
+  "204": {
     "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions_easy failure",
     "verdict": "closed"
   },
-  "152": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
-    "verdict": "closed"
-  },
-  "151": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
-    "verdict": "closed"
-  },
-  "150": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
-    "verdict": "closed"
-  },
-  "149": {
+  "203": {
     "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions_easy failure",
     "verdict": "closed"
   },
-  "148": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
+  "202": {
+    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api_hard failure",
     "verdict": "closed"
   },
-  "147": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
+  "201": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
     "verdict": "closed"
   },
-  "146": {
+  "200": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
+    "verdict": "closed"
+  },
+  "199": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs_hard failure",
+    "verdict": "closed"
+  },
+  "198": {
     "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
     "verdict": "closed"
   },
-  "145": {
-    "title": "[agent] Fix for dag4.enrich_with_scores_hard failure",
+  "197": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
     "verdict": "closed"
   },
-  "144": {
+  "196": {
+    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
+    "verdict": "closed"
+  },
+  "195": {
     "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
     "verdict": "closed"
   },
-  "143": {
-    "title": "[agent] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
+  "194": {
+    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions_easy failure",
+    "verdict": "closed"
   },
-  "142": {
+  "193": {
+    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
+    "verdict": "closed"
+  },
+  "192": {
     "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset_easy failure",
     "verdict": "closed"
   },
-  "141": {
-    "title": "[agent] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "merged"
+  "191": {
+    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
+    "verdict": "closed"
   },
-  "140": {
+  "190": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
+    "verdict": "closed"
+  },
+  "189": {
     "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions_easy failure",
-    "verdict": "merged"
-  },
-  "139": {
-    "title": "[agent] Fix for dag6.call_partner_api failure",
-    "verdict": "merged"
-  },
-  "138": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "merged"
-  },
-  "137": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
     "verdict": "closed"
   },
-  "136": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
+  "188": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
     "verdict": "closed"
   },
-  "135": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
+  "187": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores_hard failure",
     "verdict": "closed"
   },
-  "134": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
+  "186": {
+    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
     "verdict": "closed"
   },
-  "133": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
+  "185": {
+    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records_easy failure",
     "verdict": "closed"
   },
-  "132": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
+  "184": {
+    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset_easy failure",
     "verdict": "closed"
   },
-  "131": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
-    "verdict": "closed"
-  },
-  "130": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "129": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "128": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
-    "verdict": "closed"
-  },
-  "127": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "126": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "125": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "124": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "123": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "122": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "121": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "120": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "115": {
+  "183": {
     "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
     "verdict": "closed"
   },
-  "114": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "closed"
-  },
-  "113": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "112": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "closed"
-  },
-  "111": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "110": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "109": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "108": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "107": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
-    "verdict": "closed"
-  },
-  "106": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
-    "verdict": "closed"
-  },
-  "104": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "102": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "100": {
-    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
-    "verdict": "closed"
-  },
-  "99": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "98": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "97": {
-    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
-    "verdict": "closed"
-  },
-  "96": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "closed"
-  },
-  "94": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "closed"
-  },
-  "92": {
-    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
-    "verdict": "closed"
-  },
-  "91": {
+  "182": {
     "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
     "verdict": "closed"
   },
-  "89": {
+  "181": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
+    "verdict": "closed"
+  },
+  "180": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
+    "verdict": "closed"
+  },
+  "179": {
+    "title": "[agent][fallback-no-fix] Fix for dag5.write_report_to_gcs failure",
+    "verdict": "closed"
+  },
+  "178": {
     "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
     "verdict": "closed"
   },
-  "88": {
-    "title": "[agent][fallback-no-fix] Fix for dag6.call_partner_api failure",
-    "verdict": "closed"
-  },
-  "87": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "86": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "85": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "84": {
-    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
-    "verdict": "closed"
-  },
-  "83": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "81": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "80": {
-    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
-    "verdict": "closed"
-  },
-  "78": {
+  "177": {
     "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
     "verdict": "closed"
   },
-  "77": {
+  "176": {
+    "title": "[agent] Fix for dag4.enrich_with_scores failure",
+    "verdict": "merged"
+  },
+  "175": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
+    "verdict": "closed"
+  },
+  "174": {
     "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
     "verdict": "closed"
   },
-  "75": {
+  "173": {
+    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
+    "verdict": "closed"
+  },
+  "172": {
+    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
+    "verdict": "closed"
+  },
+  "171": {
+    "title": "[agent][fallback-no-fix] Fix for dag4.enrich_with_scores failure",
+    "verdict": "closed"
+  },
+  "170": {
+    "title": "[agent][fallback-no-fix] Fix for dag3.normalize_records failure",
+    "verdict": "closed"
+  },
+  "169": {
+    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
+    "verdict": "closed"
+  },
+  "168": {
+    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
+    "verdict": "closed"
+  },
+  "167": {
+    "title": "[agent][fallback-no-fix] Fix for dag2.merge_partitions failure",
+    "verdict": "closed"
+  },
+  "166": {
     "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
     "verdict": "closed"
   },
-  "73": {
+  "165": {
+    "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
+    "verdict": "closed"
+  },
+  "164": {
     "title": "[agent][fallback-no-fix] Fix for dag1.load_dataset failure",
     "verdict": "closed"
   }
