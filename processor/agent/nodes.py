@@ -163,7 +163,6 @@ def generate_fix(state: dict) -> dict:
     if not root_cause:
         return {
             "proposed_fix": "NO_CONFIDENT_FIX",
-            "llm_confidence": 0.0,
         }
 
     try:
@@ -172,8 +171,6 @@ def generate_fix(state: dict) -> dict:
                 content=(
                     "Propose the smallest possible safe fix, as a git diff only. "
                     "Respond in EXACTLY this format, nothing else:\n"
-                    "CONFIDENCE: <a decimal between 0.0 and 1.0, how confident "
-                    "you are this fix is correct>\n"
                     "DIFF:\n"
                     "<the git diff, or the literal text NO_CONFIDENT_FIX "
                     "if you are not confident>"
@@ -190,15 +187,7 @@ def generate_fix(state: dict) -> dict:
         response = llm.invoke(prompt)
         text = str(response.content)
 
-        llm_confidence = 0.0
         fix = "NO_CONFIDENT_FIX"
-
-        conf_match = re.search(r"CONFIDENCE:\s*([0-9.]+)", text)
-        if conf_match:
-            try:
-                llm_confidence = max(0.0, min(1.0, float(conf_match.group(1))))
-            except ValueError:
-                llm_confidence = 0.0
 
         diff_match = re.search(r"DIFF:\s*(.*)", text, re.DOTALL)
         if diff_match:
@@ -206,22 +195,18 @@ def generate_fix(state: dict) -> dict:
 
         return {
             "proposed_fix": fix,
-            "llm_confidence": llm_confidence,
         }
 
     except Exception as e:
         return {
             "proposed_fix": f"NO_CONFIDENT_FIX\n\nError: {str(e)}",
-            "llm_confidence": 0.0,
         }
 
 
 CONFIDENCE_WEIGHTS = {
-    "llm": 0.35,
-    "retrieval": 0.20,
-    "history": 0.20,
-    "logs": 0.15,
-    "source": 0.10,
+    "history": 0.40,
+    "logs": 0.30,
+    "source": 0.30,
 }
 
 
@@ -265,14 +250,12 @@ def _log_confidence_signals(state: dict, signals: dict, score: float, tier: str)
         "dag_id": state.get("dag_id", ""),
         "task_id": state.get("task_id", ""),
         "run_id": state.get("run_id", ""),
-        "s_llm": signals.get("s_llm"),
-        "s_retrieval": signals.get("s_retrieval"),
         "s_history": signals.get("s_history"),
         "s_logs": signals.get("s_logs"),
         "s_source": signals.get("s_source"),
         "confidence_score": score,
         "confidence_tier": tier,
-        "pr_number": None,
+        "pr_number": None,      # NOTE: never backfilled after PR creation — known gap
         "outcome": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None,
@@ -305,12 +288,9 @@ def _mark_confidence_no_pr(record_id: str):
         print(f"WARNING: failed to record no_pr outcome: {e!r}")
 
 
-
 def compute_confidence(state: dict) -> dict:
-    llm_confidence = state.get("llm_confidence", 0.0)
-
-    retrieved = state.get("retrieved_knowledge", [])
-    s_retrieval = min(1.0, len(retrieved) / 5)
+    # retrieved_knowledge is still used upstream to give the LLM context for
+    # root-cause analysis -- it's just no longer a confidence-weighting input.
 
     task_logs = state.get("task_logs", "") or ""
     if len(task_logs) > 50:
@@ -326,9 +306,7 @@ def compute_confidence(state: dict) -> dict:
     s_history = _fetch_history_score(state.get("dag_id"), state.get("task_id"))
 
     score = (
-        CONFIDENCE_WEIGHTS["llm"] * llm_confidence
-        + CONFIDENCE_WEIGHTS["retrieval"] * s_retrieval
-        + CONFIDENCE_WEIGHTS["history"] * s_history
+        CONFIDENCE_WEIGHTS["history"] * s_history
         + CONFIDENCE_WEIGHTS["logs"] * s_logs
         + CONFIDENCE_WEIGHTS["source"] * s_source
     )
@@ -341,8 +319,6 @@ def compute_confidence(state: dict) -> dict:
         tier = "low"
 
     signals = {
-        "s_llm": llm_confidence,
-        "s_retrieval": s_retrieval,
         "s_history": s_history,
         "s_logs": s_logs,
         "s_source": s_source,
