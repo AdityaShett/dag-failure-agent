@@ -15,7 +15,7 @@ def write_report_to_gcs(**context):
     client = storage.Client()
     bucket = client.bucket(REPORT_BUCKET.replace("gs://", "").rstrip("/"))
     blob = bucket.blob("reports/2026-08-30.csv")
-    blob.upload_from_filename(path)  # raises 403 Forbidden
+    blob.upload_from_filename(path, timeout=60)  # raises 403 Forbidden
 
 def archive_source(**context):
     print("Archiving source extract")
