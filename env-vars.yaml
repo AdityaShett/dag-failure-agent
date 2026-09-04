@@ -1,0 +1,5 @@
+﻿GCP_PROJECT: dag-failure-agent-505623
+GCP_LOCATION: us-central1
+BQ_DATASET: dag_failure_agent
+OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+REPO_CONFIG_PATH: config/repos.json

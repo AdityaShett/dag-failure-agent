@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'dashboard/Dockerfile.dashboard', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard'

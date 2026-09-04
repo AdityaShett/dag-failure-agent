@@ -1,4 +1,4 @@
-﻿[
+[
   {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
   {"name": "outcome", "type": "STRING", "mode": "REQUIRED"},
   {"name": "pr_number", "type": "INTEGER", "mode": "NULLABLE"},

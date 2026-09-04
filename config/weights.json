@@ -1,7 +1,5 @@
 {
   "history": 0.45,
   "logs": 0.05,
-  "source": 0.5,
-  "llm": 0.0,
-  "retrieval": 0.0
+  "source": 0.5
 }

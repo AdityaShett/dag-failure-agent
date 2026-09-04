@@ -5,6 +5,7 @@ from github import Auth, Github
 from google.cloud import storage as gcs_storage
 from unidiff.errors import UnidiffParseError
 from agent.diff_utils import apply_unified_diff
+from agent.repo_config import get_github_token
 
 _outcomes_client = gcs_storage.Client()
 _OUTCOMES_BUCKET = os.environ.get("OUTCOMES_BUCKET")
@@ -33,7 +34,7 @@ def open_draft_pr(state: dict) -> dict:
         if not state.get("target_file"):
             raise ValueError("target_file missing from state")
 
-        auth = Auth.Token(os.environ["GITHUB_TOKEN"])
+        auth = Auth.Token(get_github_token(state["github_repo"]))
         gh = Github(auth=auth)
         repo = gh.get_repo(state["github_repo"])
         file_path = state["target_file"]
@@ -121,3 +122,4 @@ def open_draft_pr(state: dict) -> dict:
     except Exception as e:
         print(f"GITHUB ERROR: {e}")
         raise
+    

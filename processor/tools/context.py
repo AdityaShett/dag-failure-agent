@@ -46,7 +46,9 @@ def fetch_task_logs(dag_id: str, task_id: str, run_id: str, window_minutes: int 
 
 def fetch_dag_source(dag_id: str, github_repo: str, target_file: str) -> str:
     from github import Auth, Github
-    auth = Auth.Token(os.environ["GITHUB_TOKEN"])
+    from agent.repo_config import get_github_token
+
+    auth = Auth.Token(get_github_token(github_repo))
     gh = Github(auth=auth)
     repo = gh.get_repo(github_repo)
     contents = repo.get_contents(target_file)

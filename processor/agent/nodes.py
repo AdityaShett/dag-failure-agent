@@ -10,6 +10,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from tools.context import fetch_task_logs, fetch_dag_source
 
+from agent.diff_utils import apply_unified_diff
+from unidiff.errors import UnidiffParseError
+
 
 PROJECT_ID = os.environ.get("GCP_PROJECT")
 LOCATION = os.environ.get("GCP_LOCATION", "global")
@@ -156,6 +159,18 @@ def analyze_root_cause(state: dict) -> dict:
         }
 
 
+def _diff_context_exists(diff_text: str, dag_source: str) -> bool:
+    """Trial-applies the diff against the real source using the exact same
+    logic pr.py uses at apply-time. If it would fail there, it's not a
+    usable fix -- catch it here instead of burning a GitHub branch/PR on
+    something guaranteed to fall back."""
+    try:
+        apply_unified_diff(dag_source, diff_text)
+        return True
+    except (UnidiffParseError, ValueError, Exception):
+        return False
+
+
 def generate_fix(state: dict) -> dict:
     root_cause = state.get("root_cause")
     dag_source = state.get("dag_source", "")
@@ -169,11 +184,17 @@ def generate_fix(state: dict) -> dict:
         prompt = [
             SystemMessage(
                 content=(
-                    "Propose the smallest possible safe fix, as a git diff only. "
+                    "Propose the smallest possible safe fix, as a git diff only.\n\n"
+                    "Before proposing anything, check whether the root cause actually "
+                    "matches the code shown below. If the root cause says the DAG ID "
+                    "or task ID doesn't match the code, if the described bug is not "
+                    "present in the current source, or if you're not certain the exact "
+                    "lines you'd change still look the way the root cause assumes, do "
+                    "NOT guess a diff — respond with NO_CONFIDENT_FIX instead.\n\n"
                     "Respond in EXACTLY this format, nothing else:\n"
                     "DIFF:\n"
                     "<the git diff, or the literal text NO_CONFIDENT_FIX "
-                    "if you are not confident>"
+                    "if you are not confident or the described bug isn't actually there>"
                 )
             ),
             HumanMessage(
@@ -188,10 +209,12 @@ def generate_fix(state: dict) -> dict:
         text = str(response.content)
 
         fix = "NO_CONFIDENT_FIX"
-
         diff_match = re.search(r"DIFF:\s*(.*)", text, re.DOTALL)
         if diff_match:
             fix = diff_match.group(1).strip()
+
+        if fix != "NO_CONFIDENT_FIX" and not _diff_context_exists(fix, dag_source):
+            fix = "NO_CONFIDENT_FIX"
 
         return {
             "proposed_fix": fix,
@@ -199,14 +222,16 @@ def generate_fix(state: dict) -> dict:
 
     except Exception as e:
         return {
-            "proposed_fix": f"NO_CONFIDENT_FIX\n\nError: {str(e)}",
+            "proposed_fix": f"NO_CONFIDENT_FIX\n\nError: {str(e)}"
         }
 
 
 CONFIDENCE_WEIGHTS = {
-    "history": 0.40,
-    "logs": 0.30,
-    "source": 0.30,
+    "llm": 0.40,
+    "retrieval": 0.20,
+    "history": 0.25,
+    "logs": 0.15,
+    "source": 0.0
 }
 
 
@@ -287,10 +312,22 @@ def _mark_confidence_no_pr(record_id: str):
     except Exception as e:
         print(f"WARNING: failed to record no_pr outcome: {e!r}")
 
+def _has_history(dag_id: str, task_id: str) -> bool:
+    bucket_name = os.environ.get("OUTCOMES_BUCKET")
+    if not bucket_name or not dag_id or not task_id:
+        return False
+    global _outcomes_client_for_history
+    if _outcomes_client_for_history is None:
+        _outcomes_client_for_history = gcs_storage.Client()
+    bucket = _outcomes_client_for_history.bucket(bucket_name)
+    return any(bucket.list_blobs(prefix=f"history/{dag_id}-{task_id}/", max_results=1))
+
 
 def compute_confidence(state: dict) -> dict:
-    # retrieved_knowledge is still used upstream to give the LLM context for
-    # root-cause analysis -- it's just no longer a confidence-weighting input.
+    llm_confidence = state.get("llm_confidence", 0.0)
+
+    retrieved = state.get("retrieved_knowledge", [])
+    s_retrieval = min(1.0, len(retrieved) / 5)
 
     task_logs = state.get("task_logs", "") or ""
     if len(task_logs) > 50:
@@ -303,13 +340,21 @@ def compute_confidence(state: dict) -> dict:
     dag_source = state.get("dag_source", "") or ""
     s_source = 1.0 if len(dag_source) > 50 else 0.0
 
+    s_history_known = _has_history(state.get("dag_id"), state.get("task_id"))
     s_history = _fetch_history_score(state.get("dag_id"), state.get("task_id"))
 
-    score = (
-        CONFIDENCE_WEIGHTS["history"] * s_history
-        + CONFIDENCE_WEIGHTS["logs"] * s_logs
-        + CONFIDENCE_WEIGHTS["source"] * s_source
-    )
+    signal_values = {
+        "llm": llm_confidence,
+        "retrieval": s_retrieval,
+        "logs": s_logs,
+        "source": s_source,
+    }
+    if s_history_known:
+        signal_values["history"] = s_history
+    # else: skip history entirely this run instead of injecting a 0.5 guess
+
+    used_weight = sum(CONFIDENCE_WEIGHTS[k] for k in signal_values)
+    score = sum(CONFIDENCE_WEIGHTS[k] * v for k, v in signal_values.items()) / used_weight
 
     if score >= 0.75:
         tier = "high"
@@ -319,7 +364,7 @@ def compute_confidence(state: dict) -> dict:
         tier = "low"
 
     signals = {
-        "s_history": s_history,
+        "s_history": s_history if s_history_known else None,
         "s_logs": s_logs,
         "s_source": s_source,
     }

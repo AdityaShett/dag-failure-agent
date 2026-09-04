@@ -1,0 +1,8 @@
+{
+  "AdityaShett/dag-failure-agent": {
+    "token_secret": "github-token-personal"
+  },
+  "default": {
+    "token_secret": "github-token-personal"
+  }
+}

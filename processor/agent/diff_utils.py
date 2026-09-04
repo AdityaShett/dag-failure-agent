@@ -18,14 +18,11 @@ def sanitize_diff_text(diff_text: str) -> str:
         return diff_text
 
     text = diff_text.strip()
-
-    # Strip a leading ```diff / ```patch / ``` fence and a trailing ``` fence.
     text = re.sub(r"^```(?:diff|patch)?\s*\n", "", text)
     text = re.sub(r"\n?```\s*$", "", text)
 
     # Repair blank context lines: inside a hunk, a completely empty line
-    # should be a single space (an unchanged blank line), not nothing --
-    # unified diff format requires every context line to start with a space.
+
     lines = text.split("\n")
     repaired = []
     in_hunk = False
@@ -41,6 +38,24 @@ def sanitize_diff_text(diff_text: str) -> str:
     return "\n".join(repaired)
 
 
+def _locate_hunk(lines, expected, hint_start):
+    n = len(expected)
+    if n == 0:
+        return hint_start
+    expected_norm = [e.rstrip("\n") for e in expected]
+
+    candidate = lines[hint_start:hint_start + n]
+    if [l.rstrip("\n") for l in candidate] == expected_norm:
+        return hint_start
+
+    for start in range(len(lines) - n + 1):
+        window = [l.rstrip("\n") for l in lines[start:start + n]]
+        if window == expected_norm:
+            return start
+
+    return None
+
+
 def apply_unified_diff(original_content: str, diff_text: str) -> str:
     if diff_text.strip() == "NO_CONFIDENT_FIX":
         return original_content
@@ -52,18 +67,18 @@ def apply_unified_diff(original_content: str, diff_text: str) -> str:
 
     for patched_file in path:
         for hunk in patched_file:
-            start = hunk.source_start - 1
+            hint_start = hunk.source_start - 1
             expected = [line.value for line in hunk if not line.is_added]
-            actual = lines[start:start + hunk.source_length]
-            actual_normalized = [l if l.endswith("\n") else l + "\n" for l in actual]
 
-            if [e.rstrip("\n") for e in expected] != [a.rstrip("\n") for a in actual_normalized]:
+            start = _locate_hunk(lines, expected, hint_start)
+            if start is None:
                 raise ValueError(
-                    f"Diff context mismatch at line {hunk.source_start}: "
-                    f"file content does not match expected patch context."
+                    f"Diff context not found anywhere in file (hunk claimed "
+                    f"line {hunk.source_start}): file content does not match "
+                    f"expected patch context."
                 )
 
             new_lines = [line.value for line in hunk if not line.is_removed]
             lines[start:start + hunk.source_length] = new_lines
-
+            
     return "".join(lines)
