@@ -1,5 +1,13 @@
 {
-  "history": 0.45,
-  "logs": 0.05,
-  "source": 0.5
+  "weights": {
+    "history": 0.34,
+    "logs": 0.33,
+    "source": 0.33
+  },
+  "n_samples": 0,
+  "train_accuracy": null,
+  "test_accuracy": null,
+  "cv_mean_accuracy": null,
+  "cv_std_accuracy": null,
+  "updated_at": null
 }

@@ -37,7 +37,7 @@ llm = ChatGoogleGenerativeAI(
     temperature=0.7,
     project=PROJECT_ID,
     location=LOCATION,
-    max_output_tokens=2048,
+    max_output_tokens=8192,
 )
 
 
@@ -226,15 +226,35 @@ def generate_fix(state: dict) -> dict:
         }
 
 
-CONFIDENCE_WEIGHTS = {
-    "llm": 0.40,
-    "retrieval": 0.20,
-    "history": 0.25,
-    "logs": 0.15,
-    "source": 0.0
+DEFAULT_CONFIDENCE_WEIGHTS = {
+    "history": 0.34,
+    "logs": 0.33,
+    "source": 0.33,
 }
 
+WEIGHTS_CONFIG_PATH = os.environ.get("CONFIDENCE_WEIGHTS_PATH", "config/weights.json")
 
+
+def _load_confidence_weights() -> dict:
+    try:
+        with open(WEIGHTS_CONFIG_PATH, "r") as f:
+            data = json.load(f)
+        weights = data.get("weights", data)  # tolerate either shape
+        missing = {"history", "logs", "source"} - set(weights)
+        if missing:
+            raise ValueError(f"weights.json missing keys: {missing}")
+        loaded = {k: float(weights[k]) for k in ("history", "logs", "source")}
+        print(f"Loaded confidence weights from {WEIGHTS_CONFIG_PATH}: {loaded}")
+        return loaded
+    except FileNotFoundError:
+        print(f"WARNING: {WEIGHTS_CONFIG_PATH} not found, using default weights")
+        return DEFAULT_CONFIDENCE_WEIGHTS
+    except Exception as e:
+        print(f"WARNING: failed to load confidence weights ({e!r}), using default")
+        return DEFAULT_CONFIDENCE_WEIGHTS
+
+
+CONFIDENCE_WEIGHTS = _load_confidence_weights()
 def _fetch_history_score(dag_id: str, task_id: str) -> float:
     global _outcomes_client_for_history
     bucket_name = os.environ.get("OUTCOMES_BUCKET")
@@ -275,6 +295,8 @@ def _log_confidence_signals(state: dict, signals: dict, score: float, tier: str)
         "dag_id": state.get("dag_id", ""),
         "task_id": state.get("task_id", ""),
         "run_id": state.get("run_id", ""),
+        "s_llm": None,
+        "s_retrieval": signals.get("s_retrieval"),
         "s_history": signals.get("s_history"),
         "s_logs": signals.get("s_logs"),
         "s_source": signals.get("s_source"),
@@ -289,9 +311,11 @@ def _log_confidence_signals(state: dict, signals: dict, score: float, tier: str)
     try:
         errors = _get_bq_client().insert_rows_json(CONFIDENCE_SIGNALS_TABLE, [row])
         if errors:
-            print(f"WARNING: confidence_signals insert failed: {errors}")
+            print(f"ERROR: confidence_signals insert failed for {record_id}: {errors}")
+            return None
     except Exception as e:
-        print(f"WARNING: failed to log confidence signals: {e!r}")
+        print(f"ERROR: failed to log confidence signals for {record_id}: {e!r}")
+        return None
 
     return record_id
 
@@ -324,8 +348,6 @@ def _has_history(dag_id: str, task_id: str) -> bool:
 
 
 def compute_confidence(state: dict) -> dict:
-    llm_confidence = state.get("llm_confidence", 0.0)
-
     retrieved = state.get("retrieved_knowledge", [])
     s_retrieval = min(1.0, len(retrieved) / 5)
 
@@ -344,8 +366,6 @@ def compute_confidence(state: dict) -> dict:
     s_history = _fetch_history_score(state.get("dag_id"), state.get("task_id"))
 
     signal_values = {
-        "llm": llm_confidence,
-        "retrieval": s_retrieval,
         "logs": s_logs,
         "source": s_source,
     }
@@ -364,6 +384,7 @@ def compute_confidence(state: dict) -> dict:
         tier = "low"
 
     signals = {
+        "s_retrieval": s_retrieval,
         "s_history": s_history if s_history_known else None,
         "s_logs": s_logs,
         "s_source": s_source,
