@@ -131,9 +131,19 @@ def _update_confidence_outcome(record: dict, pr_number: int, merged: bool):
         "record_id": record_id,
         "outcome": "merged" if merged else "rejected",
         "pr_number": pr_number,
+        # Re-emitted from the "opened" row pr.py wrote when the PR was
+        # created (carried here via the GCS pending record) so this final
+        # row -- the one a latest-row-per-record_id dashboard query
+        # actually picks up -- doesn't lose the diff_applied signal.
+        "diff_applied": record.get("diff_applied"),
+        "fallback_reason": record.get("fallback_reason"),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    table = f"{_PROJECT}.dag_failure_agent.confidence_outcomes"
+    # NOTE: previously hardcoded to "dag_failure_agent" here instead of
+    # using _BQ_DATASET -- harmless today since that's also the default,
+    # but would silently write to the wrong dataset if BQ_DATASET is ever
+    # overridden for this service without updating this line too.
+    table = f"{_PROJECT}.{_BQ_DATASET}.confidence_outcomes"
     try:
         errors = _bq_client.insert_rows_json(table, [row])
         if errors:

@@ -9,20 +9,33 @@ def sanitize_diff_text(diff_text: str) -> str:
     Confirmed in this project's processor logs: Gemini's raw diff output
     routinely arrives wrapped in ```diff / ``` fences, and blank context
     lines inside hunks sometimes drop their required leading space. Both
-    cause PatchSet(...) to raise or misparse hunk boundaries, which
-    previously fell straight through to pr.py's fallback-filler path
-    (see PROJECT-HANDOFF.md §5/§6.1) -- silently corrupting merge/reject
-    labels used for weight tuning.
+    cause PatchSet(...) to raise or misparse hunk boundaries.
     """
     if not diff_text:
         return diff_text
 
     text = diff_text.strip()
-    text = re.sub(r"^```(?:diff|patch)?\s*\n", "", text)
-    text = re.sub(r"\n?```\s*$", "", text)
+
+    # Strip ALL leading/trailing fence lines, not just one layer. Confirmed
+    # in real PRs (#317-319): Gemini sometimes emits doubled/nested fences
+    # (```diff\n```diff\n<diff>\n```\n```), and a single regex substitution
+    # left one fence layer behind, which is exactly what caused those PRs'
+    # UnidiffParseError: Hunk is shorter than expected.
+    while True:
+        new_text = re.sub(r"^```(?:diff|patch)?\s*\n", "", text)
+        if new_text == text:
+            break
+        text = new_text
+
+    while True:
+        new_text = re.sub(r"\n?```\s*$", "", text)
+        if new_text == text:
+            break
+        text = new_text
 
     # Repair blank context lines: inside a hunk, a completely empty line
-
+    # must retain its required leading space, which markdown renderers and
+    # LLMs routinely strip.
     lines = text.split("\n")
     repaired = []
     in_hunk = False
@@ -80,5 +93,5 @@ def apply_unified_diff(original_content: str, diff_text: str) -> str:
 
             new_lines = [line.value for line in hunk if not line.is_removed]
             lines[start:start + hunk.source_length] = new_lines
-            
+
     return "".join(lines)

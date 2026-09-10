@@ -1,8 +1,11 @@
 import os
 import uuid
 import json
+from datetime import datetime, timezone
+
 from github import Auth, Github
 from google.cloud import storage as gcs_storage
+from google.cloud import bigquery
 from unidiff.errors import UnidiffParseError
 from agent.diff_utils import apply_unified_diff
 from agent.repo_config import get_github_token
@@ -10,8 +13,14 @@ from agent.repo_config import get_github_token
 _outcomes_client = gcs_storage.Client()
 _OUTCOMES_BUCKET = os.environ.get("OUTCOMES_BUCKET")
 
+_bq_client = bigquery.Client()
+_PROJECT_ID = os.environ.get("GCP_PROJECT")
+_BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+_CONFIDENCE_OUTCOMES_TABLE = f"{_PROJECT_ID}.{_BQ_DATASET}.confidence_outcomes"
 
-def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, proposed_fix, confidence_record_id=None):
+
+def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, proposed_fix,
+                             confidence_record_id=None, diff_applied=None, fallback_reason=None):
     if not _OUTCOMES_BUCKET:
         return
     bucket = _outcomes_client.bucket(_OUTCOMES_BUCKET)
@@ -20,7 +29,40 @@ def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, prop
         "pr_number": pr_number, "dag_id": dag_id, "task_id": task_id,
         "run_id": run_id, "root_cause": root_cause, "proposed_fix": proposed_fix,
         "confidence_record_id": confidence_record_id,
+        # Carried forward so github_webhook_app.py can re-emit these on the
+        # final merged/rejected row -- otherwise they'd only ever exist on
+        # this "opened" row and get lost once the dashboard's
+        # latest-row-per-record_id query picks up the later row instead.
+        "diff_applied": diff_applied,
+        "fallback_reason": fallback_reason,
     }))
+
+
+def _record_pr_opened_signal(confidence_record_id, pr_number, diff_applied, fallback_reason):
+    """Writes the diff_applied/fallback_reason signal to confidence_outcomes
+    the moment the PR is opened. This is a separate, earlier row from the
+    merged/rejected row the webhook writes later -- confidence_outcomes is
+    append-only (streaming insert), so this can't be an UPDATE to any
+    existing row. Dashboards should always take the latest row per
+    record_id (see query.sql), and github_webhook_app.py re-sends these
+    same values on the later row so they survive that.
+    """
+    if not confidence_record_id or not _PROJECT_ID:
+        return
+    row = {
+        "record_id": confidence_record_id,
+        "outcome": "opened",
+        "pr_number": pr_number,
+        "diff_applied": diff_applied,
+        "fallback_reason": fallback_reason,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        errors = _bq_client.insert_rows_json(_CONFIDENCE_OUTCOMES_TABLE, [row])
+        if errors:
+            print(f"WARNING: confidence_outcomes 'opened' insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to record PR-opened signal: {e!r}")
 
 
 def open_draft_pr(state: dict) -> dict:
@@ -112,6 +154,11 @@ def open_draft_pr(state: dict) -> dict:
             pr.number, state["dag_id"], state["task_id"], state["run_id"],
             state.get("root_cause", ""), state.get("proposed_fix", ""),
             state.get("confidence_record_id"),
+            diff_applied=diff_applied, fallback_reason=fallback_reason,
+        )
+
+        _record_pr_opened_signal(
+            state.get("confidence_record_id"), pr.number, diff_applied, fallback_reason,
         )
 
         # Previously returned nothing -- processor_app.py's result.get("pr_url")
@@ -122,4 +169,3 @@ def open_draft_pr(state: dict) -> dict:
     except Exception as e:
         print(f"GITHUB ERROR: {e}")
         raise
-    

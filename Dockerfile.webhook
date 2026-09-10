@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ENV PORT=8080
+ENV PYTHONPATH=/app:/app/webhook
 EXPOSE 8080
 
-CMD ["uvicorn", "github_webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "webhook.github_webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
