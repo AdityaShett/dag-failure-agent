@@ -4,10 +4,10 @@
     "logs": 0.33,
     "source": 0.33
   },
-  "n_samples": 0,
-  "train_accuracy": null,
+  "n_samples": 10,
+  "train_accuracy": 1.0,
   "test_accuracy": null,
-  "cv_mean_accuracy": null,
-  "cv_std_accuracy": null,
-  "updated_at": null
+  "cv_mean_accuracy": 1.0,
+  "cv_std_accuracy": 0.0,
+  "updated_at": "2026-09-10T03:49:46.265774+00:00"
 }
