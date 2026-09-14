@@ -29,7 +29,13 @@ async def process(request: Request):
     envelope = await request.json()
     pubsub_message = envelope["message"]
 
-    raw_data = base64.b64decode(pubsub_message["data"]).decode("utf-8")
+    raw_data = await request.body()
+    try:
+        payload = json.loads(raw_data)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: could not parse incoming payload as JSON: {e}")
+        print(f"RAW BODY (first 500 bytes): {raw_data[:500]!r}")
+        raise
     payload = json.loads(raw_data)
 
     run_id = payload.get("run_id")
