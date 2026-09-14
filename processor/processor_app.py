@@ -26,14 +26,15 @@ app = FastAPI()
 
 @app.post("/process")
 async def process(request: Request):
-    envelope = await request.json()
+    raw_data = await request.body()
+    envelope = json.loads(raw_data)
     pubsub_message = envelope["message"]
 
-    raw_data = await request.body()
     try:
-        payload = json.loads(raw_data)
-    except json.JSONDecodeError as e:
-        print(f"ERROR: could not parse incoming payload as JSON: {e}")
+        message_data = base64.b64decode(pubsub_message["data"])
+        payload = json.loads(message_data)
+    except (KeyError, json.JSONDecodeError, base64.binascii.Error) as e:
+        print(f"ERROR: could not decode/parse Pub/Sub message: {e}")
         print(f"RAW BODY (first 500 bytes): {raw_data[:500]!r}")
         raise
     payload = json.loads(raw_data)
