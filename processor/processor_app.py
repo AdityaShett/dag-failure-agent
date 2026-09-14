@@ -37,7 +37,6 @@ async def process(request: Request):
         print(f"ERROR: could not decode/parse Pub/Sub message: {e}")
         print(f"RAW BODY (first 500 bytes): {raw_data[:500]!r}")
         raise
-    payload = json.loads(raw_data)
 
     run_id = payload.get("run_id")
     task_id = payload.get("task_id")
