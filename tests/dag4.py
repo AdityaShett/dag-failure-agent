@@ -12,8 +12,9 @@ def enrich_with_scores(**context):
     # --- BUG (intentional): assumes preferences is always a dict, never checks for None ---
     if profile["preferences"] and "marketing_opt_in" in profile["preferences"]:
         profile["scores"]["marketing_eligible"] = True
+    else:
+        profile["scores"]["marketing_eligible"] = False
     context["ti"].xcom_push(key="enriched", value=profile)
-
 def flag_high_risk(**context):
     print("Flagging high-risk customers")
 
