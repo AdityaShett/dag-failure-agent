@@ -6,11 +6,10 @@ def call_partner_api(**context):
     import requests
     # --- BUG (intentional): partner's /reconcile endpoint legitimately takes ~20s
     # under normal load; this timeout was copied from a different, faster endpoint ---
-    resp = requests.get("https://partner.example.com/reconcile", timeout=60)
+    resp = requests.get("https://partner.example.com/reconcile", timeout=120)
     context["ti"].xcom_push(key="response", value=resp.json())
 
-def parse_response(**context):
-    print("Parsing partner response")
+def parse_response(**context):    print("Parsing partner response")
 
 def store_result(**context):
     print("Storing reconciliation result")
