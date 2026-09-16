@@ -2,13 +2,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 
-# --- BUG (intentional): bucket belongs to a different project than this DAG's
-# service account has storage.objectCreator on ---
-REPORT_BUCKET = "gs://agent-data/"
+# Using a GCS bucket accessible by the DAG's service account to resolve permission issues.
+REPORT_BUCKET = "gs://your-project-airflow-reports-bucket/"
 
 def extract_reporting_data(**context):
     context["ti"].xcom_push(key="report_path", value="/tmp/report_2026_08_30.csv")
-
 def write_report_to_gcs(**context):
     from google.cloud import storage
     path = context["ti"].xcom_pull(key="report_path", task_ids="extract_reporting_data")
