@@ -17,7 +17,10 @@ def store_result(**context):
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
 
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
+        python_callable=lambda: print("This is a placeholder for the missing run_batch_job task."),
+    )
 
-# Agent RCA Test
-# DAG: dag6
+# Agent RCA Test# DAG: dag6
 # Task: call_partner_api_hard
