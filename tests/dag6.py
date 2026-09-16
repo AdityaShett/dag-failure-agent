@@ -16,7 +16,12 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
+        # The specific logic for 'run_batch_job' was not provided in the original code.
+        # This placeholder callable makes the task exist and allows it to execute without error.
+        python_callable=lambda: print("Placeholder for run_batch_job: actual logic needs to be defined."),
+    )
 
 # Agent RCA Test
 # DAG: dag6
