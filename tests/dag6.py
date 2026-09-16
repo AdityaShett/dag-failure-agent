@@ -17,6 +17,11 @@ def store_result(**context):
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
 
+    call_partner_api_hard = PythonOperator(
+        task_id="call_partner_api_hard",
+        python_callable=call_partner_api,
+        execution_timeout=timedelta(seconds=30),  # Increased timeout to accommodate 20s API call
+    )
 
 # Agent RCA Test
 # DAG: dag6
