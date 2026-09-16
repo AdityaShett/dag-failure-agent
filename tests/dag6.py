@@ -16,6 +16,11 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    # The task 'run_batch_job' was identified as missing.
+    # A placeholder PythonOperator is added to make the task exist,
+    # as its intended functionality is not specified in the root cause.
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
 
 
 # Agent RCA Test
