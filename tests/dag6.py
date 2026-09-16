@@ -7,8 +7,8 @@ def call_partner_api(**context):
     # --- BUG (intentional): partner's /reconcile endpoint legitimately takes ~20s
     # under normal load; this timeout was copied from a different, faster endpoint ---
     resp = requests.get("https://partner.example.com/reconcile", timeout=60)
+    resp.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
     context["ti"].xcom_push(key="response", value=resp.json())
-
 def parse_response(**context):
     print("Parsing partner response")
 
