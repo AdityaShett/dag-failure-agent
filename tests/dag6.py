@@ -17,7 +17,12 @@ def store_result(**context):
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
 
-
+    # Define the missing 'run_batch_job' task using an existing callable
+    # as the root cause indicates this task_id was expected but not found.
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
+        python_callable=call_partner_api,
+    )
 # Agent RCA Test
 # DAG: dag6
 # Task: call_partner_api_hard
