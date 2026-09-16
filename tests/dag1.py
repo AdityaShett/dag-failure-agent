@@ -27,7 +27,7 @@ def load_dataset(**context):
 def transform_data(**context):
     raw = context["ti"].xcom_pull(key="raw_df", task_ids="load_dataset")
     df = pd.DataFrame(raw)
-    user_ids = df["user_id"].tolist()
+    user_ids = df["uid"].tolist()
     print(f"Processed {len(user_ids)} user records")
 
 
