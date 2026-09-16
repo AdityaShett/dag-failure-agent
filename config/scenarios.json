@@ -1,0 +1,66 @@
+{
+  "github_repo": "AdityaShett/dag-failure-agent",
+  "repeats_per_scenario": 1,
+  "scenarios": [
+    {
+      "scenario_id": "schema_drift_dag1",
+      "difficulty": "easy",
+      "dag_id": "dag1",
+      "task_id": "transform_data",
+      "code_file": "tests/dag1.py",
+      "log_file": "log_easy_schema.txt",
+      "failure_type": "KeyError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "macro_mismatch_dag2",
+      "difficulty": "easy",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "code_file": "tests/dag2.py",
+      "log_file": "log_easy_partition.txt",
+      "failure_type": "FileNotFoundError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "null_handling_dag3",
+      "difficulty": "medium",
+      "dag_id": "dag3",
+      "task_id": "clean_records",
+      "code_file": "tests/dag3.py",
+      "log_file": "log_medium_null.txt",
+      "failure_type": "AttributeError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "missing_import_dag4",
+      "difficulty": "medium",
+      "dag_id": "dag4",
+      "task_id": "score_engagement",
+      "code_file": "tests/dag4.py",
+      "log_file": "log_medium_import.txt",
+      "failure_type": "ModuleNotFoundError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "partner_outage_dag5",
+      "difficulty": "hard",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "code_file": "tests/dag5.py",
+      "log_file": "log_hard_partner.txt",
+      "failure_type": "HTTPError_500_external",
+      "expected_outcome": "NO_CONFIDENT_FIX"
+    },
+    {
+      "scenario_id": "ambiguous_log_dag6",
+      "difficulty": "hard",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "code_file": "tests/dag6.py",
+      "log_file": "log_hard_ambiguous.txt",
+      "failure_type": "no_stack_trace",
+      "expected_outcome": "NO_CONFIDENT_FIX"
+    }
+  ]
+}

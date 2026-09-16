@@ -1,0 +1,8 @@
+[2026-09-10 03:14:02,201] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:14:02,203] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): read_partition> on 2026-01-15 00:00:00+00:00
+[2026-09-10 03:14:02,455] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag2.py", line 19, in read_partition
+    raise FileNotFoundError(
+FileNotFoundError: No such file or directory: '/data/warehouse/events/dt=2024-01-15/part-00000.csv'
+[2026-09-10 03:14:02,460] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag2, task_id=read_partition, execution_date=20260115T000000, start_date=20260910T031402, end_date=20260910T031402

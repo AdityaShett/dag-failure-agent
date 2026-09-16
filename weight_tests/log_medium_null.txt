@@ -1,0 +1,8 @@
+[2026-09-10 03:16:18,904] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:16:18,905] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): clean_records> on 2026-09-10 03:16:18+00:00
+[2026-09-10 03:16:18,977] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag3.py", line 21, in clean_records
+    normalized_email = record["email"].lower()
+AttributeError: 'NoneType' object has no attribute 'lower'
+[2026-09-10 03:16:18,980] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag3, task_id=clean_records, execution_date=20260910T031618, start_date=20260910T031618, end_date=20260910T031618

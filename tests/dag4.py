@@ -1,28 +1,29 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+"""
+DAG 4: Import / Dependency Missing
+Failure mode: ModuleNotFoundError caused by importing from a module path
+that was moved during a repo refactor (utils.metrics_helper -> lib.metrics).
+Expected agent outcome: PR_CREATED (medium confidence fix).
+"""
 from datetime import datetime
 
-def fetch_customer_profile(**context):
-    # preferences legitimately absent for guest checkouts — not itself a bug
-    profile = {"customer_id": "c_4471", "scores": {"risk": 0.82}, "preferences": None}
-    context["ti"].xcom_push(key="profile", value=profile)
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from utils.metrics_helper import compute_engagement_score
 
-def enrich_with_scores(**context):
-    profile = context["ti"].xcom_pull(key="profile", task_ids="fetch_customer_profile")
-    # --- BUG (intentional): assumes preferences is always a dict, never checks for None ---
-    if profile["preferences"] and "marketing_opt_in" in profile["preferences"]:
-        profile["scores"]["marketing_eligible"] = True
-    context["ti"].xcom_push(key="enriched", value=profile)
 
-def flag_high_risk(**context):
-    print("Flagging high-risk customers")
+def score_engagement(**context):
+    score = compute_engagement_score(clicks=42, views=310)
+    print(f"Engagement score: {score}")
 
-with DAG("dag4", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-    t1 = PythonOperator(task_id="fetch_customer_profile", python_callable=fetch_customer_profile)
-    t2 = PythonOperator(task_id="enrich_with_scores", python_callable=enrich_with_scores)
-    t3 = PythonOperator(task_id="flag_high_risk", python_callable=flag_high_risk)
-    t1 >> t2 >> t3
 
-# Agent RCA Test
-# DAG: dag4
-# Task: enrich_with_scores_hard
+with DAG(
+    dag_id="dag4",
+    description="Import / Dependency Missing",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "missing-import"],
+) as dag:
+    score_task = PythonOperator(
+        task_id="score_engagement", python_callable=score_engagement
+    )

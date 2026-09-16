@@ -1,13 +1,21 @@
 {
-  "weights": {
-    "history": 0.34,
-    "logs": 0.33,
-    "source": 0.33
+  "_comment": "These weights control how the agent's confidence score is computed before it decides whether to open a PR. Each weight applies to a 0-1 sub-signal; scores are combined as a weighted sum and compared to confidence_threshold. Adjust these to tune precision (fewer, safer PRs) vs recall (more PRs, more risk of a bad fix).",
+
+  "signal_weights": {
+    "stack_trace_present": 0.30,
+    "line_number_matches_source": 0.25,
+    "known_fix_pattern_match": 0.25,
+    "log_completeness": 0.10,
+    "external_dependency_detected": -0.40
   },
-  "n_samples": 10,
-  "train_accuracy": 1.0,
-  "test_accuracy": null,
-  "cv_mean_accuracy": 1.0,
-  "cv_std_accuracy": 0.0,
-  "updated_at": "2026-09-10T03:49:46.265774+00:00"
+
+  "confidence_threshold": 0.70,
+
+  "notes": {
+    "stack_trace_present": "1.0 if the log contains a full traceback, 0.0 if truncated/ambiguous (e.g. dag6).",
+    "line_number_matches_source": "1.0 if the traceback's file+line matches the current source exactly (guards against the dag3/dag4 style mismatches seen before).",
+    "known_fix_pattern_match": "1.0 if the exception type matches a pattern the agent has a template fix for (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError).",
+    "log_completeness": "Small bonus for logs with full timestamps/task context, penalizes sparse logs.",
+    "external_dependency_detected": "Negative weight — if the traceback bottoms out in a third-party library/network call (e.g. requests.HTTPError from an external host), this pulls confidence below threshold on purpose, since no code change here can fix it (dag5)."
+  }
 }

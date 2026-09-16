@@ -1,28 +1,34 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+"""
+DAG 3: Data Quality / Null Handling
+Failure mode: AttributeError from calling a string method on a None value
+that was not filtered out upstream.
+Expected agent outcome: PR_CREATED (medium confidence fix).
+"""
 from datetime import datetime
 
-def extract_api_data(**context):
-    context["ti"].xcom_push(key="records", value=[{"id": 1, "ts": "2026-08-30T00:00:00Z"}])
+from airflow import DAG
+from airflow.operators.python import PythonOperator
 
-def normalize_records(**context):
-    # --- BUG (intentional): module was renamed from date_helpers to datetime_helpers
-    # in a refactor; this import was never updated ---
-    from utils.datetime_helpers import parse_ts
-    records = context["ti"].xcom_pull(key="records", task_ids="extract_api_data")
-    for r in records:
-        r["ts"] = parse_ts(r["ts"])
-    context["ti"].xcom_push(key="normalized", value=records)
 
-def load_to_warehouse(**context):
-    print("Loading normalized records to warehouse")
+def clean_records(**context):
+    records = [
+        {"name": "Alice", "email": "alice@example.com"},
+        {"name": "Bob", "email": None},
+        {"name": "Cara", "email": "cara@example.com"},
+    ]
+    normalized = []
+    for record in records:
+        normalized_email = record["email"].lower()
+        normalized.append(normalized_email)
+    print(f"Normalized {len(normalized)} emails")
 
-with DAG("dag3", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-    t1 = PythonOperator(task_id="extract_api_data", python_callable=extract_api_data)
-    t2 = PythonOperator(task_id="normalize_records", python_callable=normalize_records)
-    t3 = PythonOperator(task_id="load_to_warehouse", python_callable=load_to_warehouse)
-    t1 >> t2 >> t3
 
-# Agent RCA Test
-# DAG: dag3
-# Task: normalize_records_easy
+with DAG(
+    dag_id="dag3",
+    description="Data Quality / Null Handling",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "null-handling"],
+) as dag:
+    clean = PythonOperator(task_id="clean_records", python_callable=clean_records)

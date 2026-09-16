@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>dag-failure-agent — Benchmark Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0E1116;
+    --panel:#161A22;
+    --panel-2:#1C212B;
+    --border:#262C38;
+    --text:#E6E9EF;
+    --muted:#8A93A3;
+    --accent:#6C8CFF;
+    --ok:#5FBE8A;
+    --wait:#E0A458;
+    --bad:#E0616B;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    padding:32px 40px 60px;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:20px;
+    margin-bottom:28px;
+  }
+  h1{
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:13.5px;
+    max-width:560px;
+    line-height:1.5;
+  }
+  .load-controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .load-controls label{
+    border:1px solid var(--border);
+    background:var(--panel);
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--text);
+    font-size:12.5px;
+  }
+  .load-controls label:hover{ border-color:var(--accent); }
+  input[type=file]{ display:none; }
+  #sourceTag{ font-family:var(--mono); }
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+    margin-bottom:32px;
+  }
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+  }
+  .stat .n{
+    font-family:var(--mono);
+    font-size:26px;
+    font-weight:600;
+    line-height:1;
+  }
+  .stat .l{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.wait .n{ color:var(--wait); }
+  .stat.bad .n{ color:var(--bad); }
+
+  section{ margin-bottom:34px; }
+  h2{
+    font-size:13px;
+    text-transform:none;
+    color:var(--muted);
+    font-weight:600;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  h2::after{
+    content:"";
+    height:1px;
+    flex:1;
+    background:var(--border);
+  }
+
+  .chart-wrap{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:20px 20px 8px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    font-size:13px;
+  }
+  thead th{
+    text-align:left;
+    font-weight:500;
+    color:var(--muted);
+    font-size:11.5px;
+    padding:10px 14px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  tbody td{
+    padding:11px 14px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--panel-2); }
+  td.mono, .mono{ font-family:var(--mono); }
+  td.dag{ color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+
+  .badge{
+    display:inline-block;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:11px;
+    font-family:var(--mono);
+    border:1px solid transparent;
+  }
+  .badge.diff-easy{ color:#8FB8FF; background:rgba(108,140,255,0.12); }
+  .badge.diff-medium{ color:var(--wait); background:rgba(224,164,88,0.12); }
+  .badge.diff-hard{ color:var(--muted); background:rgba(138,147,163,0.12); }
+
+  .outcome{ display:flex; align-items:center; gap:7px; font-size:12.5px; }
+  .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
+  .dot.ok{ background:var(--ok); }
+  .dot.wait{ background:var(--wait); }
+  .dot.bad{ background:var(--bad); }
+
+  a.pr-link{
+    color:var(--accent);
+    text-decoration:none;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  a.pr-link:hover{ text-decoration:underline; }
+  .none{ color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+
+  footer{
+    margin-top:30px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.6;
+    border-top:1px solid var(--border);
+    padding-top:16px;
+  }
+  footer code{
+    font-family:var(--mono);
+    background:var(--panel-2);
+    padding:1px 6px;
+    border-radius:4px;
+    border:1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>dag-failure-agent — Benchmark Results</h1>
+    <p>One row per published scenario run. Confidence scores are compared against <span class="mono" id="thresholdInline">threshold 0.70</span> from <code class="mono">config/weights.json</code> to decide whether a PR gets opened.</p>
+  </div>
+  <div class="load-controls">
+    <span id="sourceTag">source: sample results.json</span>
+    <label>Load results.json<input type="file" id="fileInput" accept="application/json" /></label>
+  </div>
+</header>
+
+<div class="stats" id="statsRow"></div>
+
+<section>
+  <h2>Confidence score by scenario</h2>
+  <div class="chart-wrap">
+    <canvas id="confChart" height="90"></canvas>
+  </div>
+</section>
+
+<section>
+  <h2>Run detail</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>DAG / Task</th>
+        <th>Difficulty</th>
+        <th>Failure type</th>
+        <th>Expected</th>
+        <th>Actual</th>
+        <th>Confidence</th>
+        <th>PR</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</section>
+
+<footer>
+  Expects an array of run objects with: <code>scenario_id, dag_id, task_id, difficulty, failure_type, expected_outcome, actual_outcome, confidence_score, pr_url</code>. Point your pipeline's <code>results/results.json</code> (written after each publish_batch_diverse.py batch) at this file, or use "Load results.json" to inspect any run's output locally.
+</footer>
+
+<script>
+const SAMPLE_RESULTS = [
+  {
+    "run_id": "run-schema_drift_dag1-20260910T031230Z-a1b2c3d4",
+    "scenario_id": "schema_drift_dag1",
+    "dag_id": "dag1",
+    "difficulty": "easy",
+    "failure_type": "KeyError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.93,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/101",
+    "timestamp": "2026-09-10T03:12:45Z"
+  },
+  {
+    "run_id": "run-macro_mismatch_dag2-20260910T031400Z-b2c3d4e5",
+    "scenario_id": "macro_mismatch_dag2",
+    "dag_id": "dag2",
+    "difficulty": "easy",
+    "failure_type": "FileNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.88,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/102",
+    "timestamp": "2026-09-10T03:14:10Z"
+  },
+  {
+    "run_id": "run-null_handling_dag3-20260910T031615Z-c3d4e5f6",
+    "scenario_id": "null_handling_dag3",
+    "dag_id": "dag3",
+    "difficulty": "medium",
+    "failure_type": "AttributeError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.79,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/103",
+    "timestamp": "2026-09-10T03:16:22Z"
+  },
+  {
+    "run_id": "run-missing_import_dag4-20260910T031802Z-d4e5f6a7",
+    "scenario_id": "missing_import_dag4",
+    "dag_id": "dag4",
+    "difficulty": "medium",
+    "failure_type": "ModuleNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.81,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/104",
+    "timestamp": "2026-09-10T03:18:09Z"
+  },
+  {
+    "run_id": "run-partner_outage_dag5-20260910T032040Z-e5f6a7b8",
+    "scenario_id": "partner_outage_dag5",
+    "dag_id": "dag5",
+    "difficulty": "hard",
+    "failure_type": "HTTPError_500_external",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.22,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:21:20Z"
+  },
+  {
+    "run_id": "run-ambiguous_log_dag6-20260910T032355Z-f6a7b8c9",
+    "scenario_id": "ambiguous_log_dag6",
+    "dag_id": "dag6",
+    "difficulty": "hard",
+    "failure_type": "no_stack_trace",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.11,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:24:15Z"
+  }
+];
+const CONFIDENCE_THRESHOLD = 0.70;
+
+let chartInstance = null;
+
+function outcomeDotClass(row){
+  if (row.actual_outcome !== row.expected_outcome) return 'bad';
+  return row.actual_outcome === 'PR_CREATED' ? 'ok' : 'wait';
+}
+
+function render(results){
+  // --- stats row ---
+  const total = results.length;
+  const created = results.filter(r => r.actual_outcome === 'PR_CREATED').length;
+  const noFix = results.filter(r => r.actual_outcome === 'NO_CONFIDENT_FIX').length;
+  const mismatched = results.filter(r => r.actual_outcome !== r.expected_outcome).length;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="l">Scenarios run</div></div>
+    <div class="stat ok"><div class="n">${created}</div><div class="l">PRs created</div></div>
+    <div class="stat wait"><div class="n">${noFix}</div><div class="l">No confident fix</div></div>
+    <div class="stat ${mismatched ? 'bad' : ''}"><div class="n">${mismatched}</div><div class="l">Unexpected outcome</div></div>
+  `;
+
+  // --- table ---
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = results.map(r => `
+    <tr>
+      <td class="mono">${r.scenario_id}</td>
+      <td class="dag">${r.dag_id}${r.task_id ? ' · ' + r.task_id : ''}</td>
+      <td><span class="badge diff-${r.difficulty || 'medium'}">${r.difficulty || '—'}</span></td>
+      <td class="mono" style="color:var(--muted); font-size:12.5px;">${r.failure_type || '—'}</td>
+      <td class="mono" style="font-size:12.5px; color:var(--muted);">${r.expected_outcome}</td>
+      <td>
+        <div class="outcome">
+          <span class="dot ${outcomeDotClass(r)}"></span>
+          <span class="mono" style="font-size:12.5px;">${r.actual_outcome}</span>
+        </div>
+      </td>
+      <td class="mono">${(r.confidence_score ?? 0).toFixed(2)}</td>
+      <td>${r.pr_url ? `<a class="pr-link" href="${r.pr_url}" target="_blank">#${r.pr_url.split('/').pop()}</a>` : '<span class="none">—</span>'}</td>
+    </tr>
+  `).join('');
+
+  // --- chart ---
+  const ctx = document.getElementById('confChart');
+  const labels = results.map(r => r.scenario_id.replace(/_/g, ' '));
+  const scores = results.map(r => r.confidence_score ?? 0);
+  const colors = results.map(r => {
+    if (r.actual_outcome !== r.expected_outcome) return '#E0616B';
+    return r.actual_outcome === 'PR_CREATED' ? '#5FBE8A' : '#E0A458';
+  });
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: scores,
+        backgroundColor: colors,
+        borderRadius: 4,
+        maxBarThickness: 34,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => `confidence ${item.raw.toFixed(2)}`
+          }
+        },
+        annotation: undefined,
+      },
+      scales: {
+        x: {
+          min: 0, max: 1,
+          grid: { color: '#262C38' },
+          ticks: { color: '#8A93A3', font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#E6E9EF', font: { family: 'IBM Plex Mono', size: 11.5 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'thresholdLine',
+      afterDraw(chart){
+        const {ctx, chartArea, scales} = chart;
+        const x = scales.x.getPixelForValue(CONFIDENCE_THRESHOLD);
+        ctx.save();
+        ctx.strokeStyle = '#6C8CFF';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      document.getElementById('sourceTag').textContent = `source: ${file.name}`;
+      render(data);
+    } catch (err) {
+      alert('Could not parse that file as JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+render(SAMPLE_RESULTS);
+</script>
+</body>
+</html>

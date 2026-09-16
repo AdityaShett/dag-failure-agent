@@ -1,0 +1,7 @@
+[2026-09-10 03:18:05,331] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:18:05,332] {dagbag.py:588} ERROR - Failed to import: /opt/airflow/dags/tests/dag4.py
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag4.py", line 11, in <module>
+    from utils.metrics_helper import compute_engagement_score
+ModuleNotFoundError: No module named 'utils.metrics_helper'
+[2026-09-10 03:18:05,335] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag4, task_id=score_engagement, execution_date=20260910T031805, start_date=20260910T031805, end_date=20260910T031805
