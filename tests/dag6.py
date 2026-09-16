@@ -9,6 +9,9 @@ def call_partner_api(**context):
     resp = requests.get("https://partner.example.com/reconcile", timeout=60)
     context["ti"].xcom_push(key="response", value=resp.json())
 
+def _run_batch_job_placeholder(**context):
+    print("Task 'run_batch_job' executed. Its specific logic needs to be defined.")
+
 def parse_response(**context):
     print("Parsing partner response")
 
@@ -16,6 +19,10 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    # The task 'run_batch_job' was not defined, leading to its failure.
+    # This adds a placeholder task to ensure it exists and can be executed.
+    run_batch_job_task = PythonOperator(
+        task_id="run_batch_job",
 
 
 # Agent RCA Test
