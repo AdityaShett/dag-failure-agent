@@ -16,6 +16,11 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
+        python_callable=call_partner_api,
+        provide_context=True,
+    )
 
 
 # Agent RCA Test
