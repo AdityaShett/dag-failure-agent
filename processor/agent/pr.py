@@ -124,7 +124,19 @@ def open_draft_pr(state: dict) -> dict:
 
         base_branch = repo.default_branch
         base_sha = repo.get_branch(base_branch).commit.sha
-        branch_name = f"agent-fix/{state['dag_id']}-{uuid.uuid4().hex[:8]}"
+
+        # Honour a branch_name supplied in the publisher's payload when there
+        # is one (publish_batch_diverse.py sends "agent/fix-<dag>-<run_id>",
+        # which makes a PR traceable back to the exact published run), and
+        # fall back to the generated name otherwise. The old code always
+        # generated its own "agent-fix/dagN-<hash>", which is why the cleanup
+        # script had to close PRs by that pattern and why no PR could be
+        # matched to the run that produced it.
+        requested = (state.get("branch_name") or "").strip().strip("/")
+        if requested and all(c.isalnum() or c in "-_/." for c in requested):
+            branch_name = requested
+        else:
+            branch_name = f"agent-fix/{state['dag_id']}-{uuid.uuid4().hex[:8]}"
 
         repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=base_sha)
 

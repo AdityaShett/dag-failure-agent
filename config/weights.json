@@ -1,21 +1,42 @@
 {
-  "_comment": "These weights control how the agent's confidence score is computed before it decides whether to open a PR. Each weight applies to a 0-1 sub-signal; scores are combined as a weighted sum and compared to confidence_threshold. Adjust these to tune precision (fewer, safer PRs) vs recall (more PRs, more risk of a bad fix).",
-
+  "version": 2,
+  "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold. Edit by hand, or regenerate with `python tune_weights.py`.",
   "signal_weights": {
-    "stack_trace_present": 0.30,
-    "line_number_matches_source": 0.25,
-    "known_fix_pattern_match": 0.25,
-    "log_completeness": 0.10,
-    "external_dependency_detected": -0.40
+    "stack_trace_present": 0.24,
+    "line_number_matches_source": 0.34,
+    "known_fix_pattern_match": 0.24,
+    "log_completeness": 0.06,
+    "history_merge_rate": 0.07,
+    "retrieval_support": 0.05
   },
-
-  "confidence_threshold": 0.70,
-
+  "penalty_weights": {
+    "external_dependency_detected": -0.4
+  },
+  "confidence_threshold": 0.7,
+  "tier_thresholds": {
+    "high": 0.85,
+    "medium": 0.6
+  },
   "notes": {
-    "stack_trace_present": "1.0 if the log contains a full traceback, 0.0 if truncated/ambiguous (e.g. dag6).",
-    "line_number_matches_source": "1.0 if the traceback's file+line matches the current source exactly (guards against the dag3/dag4 style mismatches seen before).",
-    "known_fix_pattern_match": "1.0 if the exception type matches a pattern the agent has a template fix for (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError).",
-    "log_completeness": "Small bonus for logs with full timestamps/task context, penalizes sparse logs.",
-    "external_dependency_detected": "Negative weight — if the traceback bottoms out in a third-party library/network call (e.g. requests.HTTPError from an external host), this pulls confidence below threshold on purpose, since no code change here can fix it (dag5)."
+    "stack_trace_present": "1.0 for a full traceback with an exception line; 0.8 frames but no 'Traceback' header; 0.4 exception line only; 0.0 nothing (dag6).",
+    "line_number_matches_source": "1.0 the failing line of code is where the traceback says it is; 0.6 it exists elsewhere in the file; 0.25 only the function matches; 0.0 the code isn't in this file at all. This is the guard that catches a stale or wrong DAG source being analysed against a fresh log.",
+    "known_fix_pattern_match": "1.0 if the exception type is in confidence.KNOWN_FIX_PATTERNS (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError, ...).",
+    "log_completeness": "Fraction of six checks: timestamps, level markers, >=4 lines, task_id present, dag_id present, >=200 chars.",
+    "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. Omitted (not guessed) when there is no history.",
+    "retrieval_support": "OPTIONAL. min(1, similar prior incidents found / 5).",
+    "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage (dag5). Subtracted from the weighted mean so an otherwise-perfect log still lands below threshold, because no change to this repo fixes it."
+  },
+  "metadata": {
+    "source": "hand-tuned, validated against config/tuning_fixtures.json (17 rows) with `python tune_weights.py score`",
+    "measured": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_samples": 17,
+      "n_positive": 4
+    },
+    "margin": "nearest negative scores 0.614 against a 0.70 threshold; nearest positive scores 1.000",
+    "note": "Regenerate with `python tune_weights.py fit --apply` once BigQuery has >=5 human-labeled PR outcomes per class; that overwrites this block with fitted values and their cross-validated accuracy."
   }
 }

@@ -1,74 +1,234 @@
-[
-  {
-    "run_id": "run-schema_drift_dag1-20260910T031230Z-a1b2c3d4",
-    "scenario_id": "schema_drift_dag1",
-    "dag_id": "dag1",
-    "difficulty": "easy",
-    "failure_type": "KeyError",
-    "expected_outcome": "PR_CREATED",
-    "actual_outcome": "PR_CREATED",
-    "confidence_score": 0.93,
-    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/101",
-    "timestamp": "2026-09-10T03:12:45Z"
+{
+  "generated_at": "2026-09-16T17:46:28.645468+00:00",
+  "mode": "local-scoring",
+  "weights": {
+    "version": 2,
+    "signal_weights": {
+      "stack_trace_present": 0.24,
+      "line_number_matches_source": 0.34,
+      "known_fix_pattern_match": 0.24,
+      "log_completeness": 0.06,
+      "history_merge_rate": 0.07,
+      "retrieval_support": 0.05
+    },
+    "penalty_weights": {
+      "external_dependency_detected": -0.4
+    },
+    "confidence_threshold": 0.7,
+    "tier_thresholds": {
+      "high": 0.85,
+      "medium": 0.6
+    },
+    "metadata": {
+      "source": "hand-tuned, validated against config/tuning_fixtures.json (17 rows) with `python tune_weights.py score`",
+      "measured": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "n_samples": 17,
+        "n_positive": 4
+      },
+      "margin": "nearest negative scores 0.614 against a 0.70 threshold; nearest positive scores 1.000",
+      "note": "Regenerate with `python tune_weights.py fit --apply` once BigQuery has >=5 human-labeled PR outcomes per class; that overwrites this block with fitted values and their cross-validated accuracy."
+    },
+    "notes": {
+      "stack_trace_present": "1.0 for a full traceback with an exception line; 0.8 frames but no 'Traceback' header; 0.4 exception line only; 0.0 nothing (dag6).",
+      "line_number_matches_source": "1.0 the failing line of code is where the traceback says it is; 0.6 it exists elsewhere in the file; 0.25 only the function matches; 0.0 the code isn't in this file at all. This is the guard that catches a stale or wrong DAG source being analysed against a fresh log.",
+      "known_fix_pattern_match": "1.0 if the exception type is in confidence.KNOWN_FIX_PATTERNS (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError, ...).",
+      "log_completeness": "Fraction of six checks: timestamps, level markers, >=4 lines, task_id present, dag_id present, >=200 chars.",
+      "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. Omitted (not guessed) when there is no history.",
+      "retrieval_support": "OPTIONAL. min(1, similar prior incidents found / 5).",
+      "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage (dag5). Subtracted from the weighted mean so an otherwise-perfect log still lands below threshold, because no change to this repo fixes it."
+    },
+    "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold. Edit by hand, or regenerate with `python tune_weights.py`."
   },
-  {
-    "run_id": "run-macro_mismatch_dag2-20260910T031400Z-b2c3d4e5",
-    "scenario_id": "macro_mismatch_dag2",
-    "dag_id": "dag2",
-    "difficulty": "easy",
-    "failure_type": "FileNotFoundError",
-    "expected_outcome": "PR_CREATED",
-    "actual_outcome": "PR_CREATED",
-    "confidence_score": 0.88,
-    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/102",
-    "timestamp": "2026-09-10T03:14:10Z"
-  },
-  {
-    "run_id": "run-null_handling_dag3-20260910T031615Z-c3d4e5f6",
-    "scenario_id": "null_handling_dag3",
-    "dag_id": "dag3",
-    "difficulty": "medium",
-    "failure_type": "AttributeError",
-    "expected_outcome": "PR_CREATED",
-    "actual_outcome": "PR_CREATED",
-    "confidence_score": 0.79,
-    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/103",
-    "timestamp": "2026-09-10T03:16:22Z"
-  },
-  {
-    "run_id": "run-missing_import_dag4-20260910T031802Z-d4e5f6a7",
-    "scenario_id": "missing_import_dag4",
-    "dag_id": "dag4",
-    "difficulty": "medium",
-    "failure_type": "ModuleNotFoundError",
-    "expected_outcome": "PR_CREATED",
-    "actual_outcome": "PR_CREATED",
-    "confidence_score": 0.81,
-    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/104",
-    "timestamp": "2026-09-10T03:18:09Z"
-  },
-  {
-    "run_id": "run-partner_outage_dag5-20260910T032040Z-e5f6a7b8",
-    "scenario_id": "partner_outage_dag5",
-    "dag_id": "dag5",
-    "difficulty": "hard",
-    "failure_type": "HTTPError_500_external",
-    "expected_outcome": "NO_CONFIDENT_FIX",
-    "actual_outcome": "NO_CONFIDENT_FIX",
-    "confidence_score": 0.22,
-    "pr_url": null,
-    "timestamp": "2026-09-10T03:21:20Z"
-  },
-  {
-    "run_id": "run-ambiguous_log_dag6-20260910T032355Z-f6a7b8c9",
-    "scenario_id": "ambiguous_log_dag6",
-    "dag_id": "dag6",
-    "difficulty": "hard",
-    "failure_type": "no_stack_trace",
-    "expected_outcome": "NO_CONFIDENT_FIX",
-    "actual_outcome": "NO_CONFIDENT_FIX",
-    "confidence_score": 0.11,
-    "pr_url": null,
-    "timestamp": "2026-09-10T03:24:15Z"
-  }
-]
+  "runs": [
+    {
+      "run_id": "local-schema_drift_dag1-20260916T174628Z",
+      "scenario_id": "schema_drift_dag1",
+      "dag_id": "dag1",
+      "task_id": "transform_data",
+      "difficulty": "easy",
+      "failure_type": "KeyError",
+      "expected_outcome": "PR_CREATED",
+      "actual_outcome": "PR_CREATED",
+      "confidence_score": 1.0,
+      "confidence_tier": "high",
+      "signals": {
+        "stack_trace_present": 1.0,
+        "line_number_matches_source": 1.0,
+        "known_fix_pattern_match": 1.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 0.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.24,
+        "line_number_matches_source": 0.34,
+        "known_fix_pattern_match": 0.24,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.0
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.625917+00:00"
+    },
+    {
+      "run_id": "local-macro_mismatch_dag2-20260916T174628Z",
+      "scenario_id": "macro_mismatch_dag2",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "difficulty": "easy",
+      "failure_type": "FileNotFoundError",
+      "expected_outcome": "PR_CREATED",
+      "actual_outcome": "PR_CREATED",
+      "confidence_score": 1.0,
+      "confidence_tier": "high",
+      "signals": {
+        "stack_trace_present": 1.0,
+        "line_number_matches_source": 1.0,
+        "known_fix_pattern_match": 1.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 0.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.24,
+        "line_number_matches_source": 0.34,
+        "known_fix_pattern_match": 0.24,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.0
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+    },
+    {
+      "run_id": "local-null_handling_dag3-20260916T174628Z",
+      "scenario_id": "null_handling_dag3",
+      "dag_id": "dag3",
+      "task_id": "clean_records",
+      "difficulty": "medium",
+      "failure_type": "AttributeError",
+      "expected_outcome": "PR_CREATED",
+      "actual_outcome": "PR_CREATED",
+      "confidence_score": 1.0,
+      "confidence_tier": "high",
+      "signals": {
+        "stack_trace_present": 1.0,
+        "line_number_matches_source": 1.0,
+        "known_fix_pattern_match": 1.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 0.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.24,
+        "line_number_matches_source": 0.34,
+        "known_fix_pattern_match": 0.24,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.0
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+    },
+    {
+      "run_id": "local-missing_import_dag4-20260916T174628Z",
+      "scenario_id": "missing_import_dag4",
+      "dag_id": "dag4",
+      "task_id": "score_engagement",
+      "difficulty": "medium",
+      "failure_type": "ModuleNotFoundError",
+      "expected_outcome": "PR_CREATED",
+      "actual_outcome": "PR_CREATED",
+      "confidence_score": 1.0,
+      "confidence_tier": "high",
+      "signals": {
+        "stack_trace_present": 1.0,
+        "line_number_matches_source": 1.0,
+        "known_fix_pattern_match": 1.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 0.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.24,
+        "line_number_matches_source": 0.34,
+        "known_fix_pattern_match": 0.24,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.0
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+    },
+    {
+      "run_id": "local-partner_outage_dag5-20260916T174628Z",
+      "scenario_id": "partner_outage_dag5",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "difficulty": "hard",
+      "failure_type": "HTTPError_500_external",
+      "expected_outcome": "NO_CONFIDENT_FIX",
+      "actual_outcome": "NO_CONFIDENT_FIX",
+      "confidence_score": 0.3273,
+      "confidence_tier": "low",
+      "signals": {
+        "stack_trace_present": 1.0,
+        "line_number_matches_source": 1.0,
+        "known_fix_pattern_match": 0.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 1.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.24,
+        "line_number_matches_source": 0.34,
+        "known_fix_pattern_match": 0.0,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.4
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.640685+00:00"
+    },
+    {
+      "run_id": "local-ambiguous_log_dag6-20260916T174628Z",
+      "scenario_id": "ambiguous_log_dag6",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "difficulty": "hard",
+      "failure_type": "no_stack_trace",
+      "expected_outcome": "NO_CONFIDENT_FIX",
+      "actual_outcome": "NO_CONFIDENT_FIX",
+      "confidence_score": 0.0682,
+      "confidence_tier": "low",
+      "signals": {
+        "stack_trace_present": 0.0,
+        "line_number_matches_source": 0.0,
+        "known_fix_pattern_match": 0.0,
+        "log_completeness": 1.0,
+        "external_dependency_detected": 0.0,
+        "history_merge_rate": null,
+        "retrieval_support": null
+      },
+      "contributions": {
+        "stack_trace_present": 0.0,
+        "line_number_matches_source": 0.0,
+        "known_fix_pattern_match": 0.0,
+        "log_completeness": 0.06,
+        "external_dependency_detected": -0.0
+      },
+      "pr_url": null,
+      "mode": "local-scoring",
+      "timestamp": "2026-09-16T17:46:28.643126+00:00"
+    }
+  ]
+}

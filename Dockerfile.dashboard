@@ -6,6 +6,12 @@ COPY dashboard/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY dashboard/ ./dashboard/
+# app.py imports processor/agent/confidence.py so the dashboard scores runs
+# with exactly the same formula as the worker, and reads config/weights.json
+# to show what is actually deployed. Both must be in the image.
+COPY processor/agent/confidence.py ./processor/agent/confidence.py
+COPY processor/agent/__init__.py ./processor/agent/__init__.py
+COPY config/weights.json ./config/weights.json
 
 ENV PORT=8080
 EXPOSE 8080

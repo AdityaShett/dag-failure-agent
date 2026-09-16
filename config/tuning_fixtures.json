@@ -1,0 +1,179 @@
+{
+  "_comment": "Labeled dataset for offline weight tuning (`python tune_weights.py --source fixtures`). label=1 means 'the agent SHOULD open a PR against the current repo for this log'; label=0 means it should stop at NO_CONFIDENT_FIX. Once confidence_signals/confidence_outcomes in BigQuery have enough human-labeled PR outcomes, prefer `--source bigquery` -- this file exists so that weight tuning is runnable and verifiable today, without GCP credentials, and so a regression in signal extraction is caught immediately.",
+  "label_policy": {
+    "1": "The log describes a bug that is present in the current source file and is mechanically fixable in this repo.",
+    "0": "Either the failure is external/infra (no code change fixes it), the log carries no usable stack trace, or the log describes code that does not exist in the current source (stale log vs. current DAG -- the agent must refuse rather than hallucinate a diff)."
+  },
+  "fixtures": [
+    {
+      "id": "schema_drift_dag1",
+      "group": "benchmark",
+      "dag_id": "dag1",
+      "task_id": "transform_data",
+      "code_file": "tests/dag1.py",
+      "log_file": "log_easy_schema.txt",
+      "label": 1,
+      "notes": "KeyError 'user_id' at dag1.py:30, line present in current source."
+    },
+    {
+      "id": "macro_mismatch_dag2",
+      "group": "benchmark",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "code_file": "tests/dag2.py",
+      "log_file": "log_easy_partition.txt",
+      "label": 1,
+      "notes": "ds vs ds_nodash partition path, FileNotFoundError at dag2.py:19."
+    },
+    {
+      "id": "null_handling_dag3",
+      "group": "benchmark",
+      "dag_id": "dag3",
+      "task_id": "clean_records",
+      "code_file": "tests/dag3.py",
+      "log_file": "log_medium_null.txt",
+      "label": 1,
+      "notes": "AttributeError on None email at dag3.py:21."
+    },
+    {
+      "id": "missing_import_dag4",
+      "group": "benchmark",
+      "dag_id": "dag4",
+      "task_id": "score_engagement",
+      "code_file": "tests/dag4.py",
+      "log_file": "log_medium_import.txt",
+      "label": 1,
+      "notes": "ModuleNotFoundError at dag4.py:11, import line present in current source."
+    },
+    {
+      "id": "partner_outage_dag5",
+      "group": "benchmark",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "code_file": "tests/dag5.py",
+      "log_file": "log_hard_partner.txt",
+      "label": 0,
+      "notes": "Negative test: third-party 500. Traceback is perfect, source matches -- only the external-dependency penalty should keep this under threshold."
+    },
+    {
+      "id": "ambiguous_log_dag6",
+      "group": "benchmark",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "code_file": "tests/dag6.py",
+      "log_file": "log_hard_ambiguous.txt",
+      "label": 0,
+      "notes": "Negative test: logger at CRITICAL, no traceback ever reaches the log."
+    },
+    {
+      "id": "legacy_load_dataset",
+      "group": "legacy",
+      "dag_id": "dag1",
+      "task_id": "load_dataset",
+      "code_file": "tests/dag1.py",
+      "log_file": "log_easy_load.txt",
+      "label": 0,
+      "notes": "Pre-rewrite log. The failing line df['user_id'] at dag1.py:11 does not exist in the current dag1.py -- correct behaviour is to refuse, not to patch a line that isn't there."
+    },
+    {
+      "id": "legacy_merge_partitions",
+      "group": "legacy",
+      "dag_id": "dag2",
+      "task_id": "merge_partitions",
+      "code_file": "tests/dag2.py",
+      "log_file": "log_easy_merge.txt",
+      "label": 0,
+      "notes": "Pre-rewrite log referencing a merge_partitions task that no longer exists."
+    },
+    {
+      "id": "legacy_normalize_records",
+      "group": "legacy",
+      "dag_id": "dag3",
+      "task_id": "normalize_records",
+      "code_file": "tests/dag3.py",
+      "log_file": "log_easy_normalize.txt",
+      "label": 0,
+      "notes": "Pre-rewrite log referencing normalize_records; not in current dag3.py."
+    },
+    {
+      "id": "legacy_enrich_with_scores",
+      "group": "legacy",
+      "dag_id": "dag4",
+      "task_id": "enrich_with_scores",
+      "code_file": "tests/dag4.py",
+      "log_file": "log_hard_enrich.txt",
+      "label": 0,
+      "notes": "External scoring service timeouts and an explicitly missing stack trace."
+    },
+    {
+      "id": "legacy_write_report_to_gcs",
+      "group": "legacy",
+      "dag_id": "dag5",
+      "task_id": "write_report_to_gcs",
+      "code_file": "tests/dag5.py",
+      "log_file": "log_hard_report.txt",
+      "label": 0,
+      "notes": "Upload timeout with no traceback; infra-shaped, intermittent."
+    },
+    {
+      "id": "legacy_import_error",
+      "group": "legacy",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "code_file": "tests/dag2.py",
+      "log_file": "log_import_error.txt",
+      "label": 0,
+      "notes": "Import of pandas_extra_utils at dag2.py:5 -- not in the current file."
+    },
+    {
+      "id": "legacy_null_ambiguous",
+      "group": "legacy",
+      "dag_id": "dag3",
+      "task_id": "merge_results",
+      "code_file": "tests/dag3.py",
+      "log_file": "log_null_ambiguous.txt",
+      "label": 0,
+      "notes": "AttributeError at dag3.py:88 -- past the end of the current file."
+    },
+    {
+      "id": "legacy_permission_denied",
+      "group": "legacy",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "code_file": "tests/dag5.py",
+      "log_file": "log_permission_short.txt",
+      "label": 0,
+      "notes": "403 from GCS: an IAM problem, not a code problem."
+    },
+    {
+      "id": "legacy_task_timeout",
+      "group": "legacy",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "code_file": "tests/dag6.py",
+      "log_file": "log_timeout_long.txt",
+      "label": 0,
+      "notes": "AirflowTaskTimeout after 5 retries against an unresponsive upstream."
+    },
+    {
+      "id": "legacy_typo_keyerror",
+      "group": "legacy",
+      "dag_id": "dag1",
+      "task_id": "transform",
+      "code_file": "tests/dag1.py",
+      "log_file": "log_typo_short.txt",
+      "label": 0,
+      "notes": "KeyError 'colum_name' at dag1.py:42 in a transform() that is not in the current file."
+    },
+    {
+      "id": "legacy_dependency_empty_input",
+      "group": "legacy",
+      "dag_id": "dag4",
+      "task_id": "transform",
+      "code_file": "tests/dag4.py",
+      "log_file": "log_dependency_long.txt",
+      "label": 0,
+      "notes": "Empty upstream file at dag4.py:61 -- line does not exist in the current file."
+    }
+  ]
+}

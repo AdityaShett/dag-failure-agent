@@ -60,7 +60,8 @@ def load_log_contents(log_file: str, weight_tests_dir: str) -> str:
         return f.read()
 
 
-def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_dir: str) -> dict:
+def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_dir: str,
+                  source_ref: str = None) -> dict:
     return {
         "run_id": run_id,
         "github_repo": github_repo,
@@ -77,7 +78,12 @@ def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_di
         "log_file": scenario["log_file"],
         "scenario_id": scenario["scenario_id"],
         "difficulty": scenario.get("difficulty"),
+        "failure_type": scenario.get("failure_type"),
         "expected_outcome": scenario.get("expected_outcome"),
+        # Pins the worker's fetch_dag_source to a specific ref for this run.
+        # Without it the worker reads the repo's DEFAULT branch, which is how
+        # logs for the new DAGs ended up being analysed against the old ones.
+        "source_ref": source_ref,
         "branch_name": f"agent/fix-{scenario['dag_id']}-{run_id}",
     }
 
@@ -115,6 +121,12 @@ def main():
         help="Where to write the manifest of published run_ids (for the dashboard)",
     )
     parser.add_argument(
+        "--source-ref",
+        default=None,
+        help="Git ref the worker should read DAG source from (e.g. a feature "
+             "branch that isn't merged yet). Defaults to the repo's default branch.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Build payloads and write the manifest without calling Pub/Sub",
@@ -143,7 +155,8 @@ def main():
     for scenario in scenarios:
         for repeat_index in range(repeats):
             run_id = make_run_id(scenario["scenario_id"])
-            payload = build_payload(scenario, run_id, github_repo, args.weight_tests_dir)
+            payload = build_payload(scenario, run_id, github_repo,
+                                    args.weight_tests_dir, args.source_ref)
             count += 1
 
             log.info(
@@ -164,6 +177,8 @@ def main():
             if count < total:
                 time.sleep(args.delay_seconds)
 
+    # The manifest is what export_results.py joins against, so keeping the
+    # log body out of it keeps that file readable.
     manifest_path = Path(args.manifest_out)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with open(manifest_path, "w") as f:

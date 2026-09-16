@@ -6,6 +6,7 @@ import os
 from fastapi import FastAPI, Request
 
 from agent.graph import app as agent_graph
+from agent import results_log
 from google.cloud import storage
 
 logging.basicConfig(level=logging.INFO)
@@ -80,20 +81,83 @@ async def process(request: Request):
 
     logger.info(f"Processing: DAG={dag_id} REPO={github_repo} FILE={target_file}")
 
-    result = agent_graph.invoke(
-        {
-            "dag_id": dag_id,
-            "task_id": payload.get("task_id"),
-            "run_id": payload.get("run_id"),
-            "try_number": payload.get("try_number", 1),
-            "github_repo": github_repo,
-            "target_file": target_file,
-            "synthetic_task_logs": payload.get("synthetic_task_logs"),
-        }
-    )
+    # The graph call is wrapped so a crash inside it cannot become a poison
+    # pill. Previously only envelope parsing was guarded: any exception in
+    # the graph (the fetch_task_logs TypeError, a GitHub 404, a Vertex
+    # quota error) escaped as an unhandled 500, Pub/Sub nacked the message
+    # and redelivered it -- for up to the 7-day retention window. That is
+    # what the "dozens of PRs referencing old task names over 1.5 hours"
+    # backlog actually was.
+    try:
+        result = agent_graph.invoke(
+            {
+                "dag_id": dag_id,
+                "task_id": payload.get("task_id"),
+                "run_id": run_id,
+                "try_number": payload.get("try_number", 1),
+                "github_repo": github_repo,
+                "target_file": target_file,
+                "synthetic_task_logs": payload.get("synthetic_task_logs"),
+                "source_ref": payload.get("source_ref") or os.environ.get("DAG_SOURCE_REF") or None,
+                # Benchmark metadata, carried through so a result row can be
+                # scored against what the scenario expected.
+                "scenario_id": payload.get("scenario_id"),
+                "difficulty": payload.get("difficulty"),
+                "failure_type": payload.get("failure_type"),
+                "expected_outcome": payload.get("expected_outcome"),
+            }
+        )
+    except Exception as e:
+        logger.exception(
+            f"Graph failed for run_id={run_id} dag_id={dag_id}: {e}"
+        )
+        # 200 = ack. The message is bad or the run is unrecoverable; retrying
+        # it identically will not help, and the traceback is in the logs.
+        return {"status": "error", "stage": "graph", "message": str(e)}
 
     logger.info(f"Graph result: {result}")
-    return {"status": "processed", "pr_url": result.get("pr_url")}
+
+    actual_outcome = "PR_CREATED" if result.get("pr_url") else "NO_CONFIDENT_FIX"
+    results_log.record_run({**payload, **result}, actual_outcome)
+
+    expected = payload.get("expected_outcome")
+    if expected and expected != actual_outcome:
+        logger.warning(
+            f"UNEXPECTED OUTCOME scenario={payload.get('scenario_id')} "
+            f"expected={expected} actual={actual_outcome} "
+            f"confidence={result.get('confidence_score')} "
+            f"reason={result.get('gate_reason')}"
+        )
+
+    return {
+        "status": "processed",
+        "outcome": actual_outcome,
+        "pr_url": result.get("pr_url"),
+        "confidence_score": result.get("confidence_score"),
+        "confidence_tier": result.get("confidence_tier"),
+        "gate_reason": result.get("gate_reason"),
+    }
+
+
+@app.get("/weights")
+async def weights():
+    """What the running container actually loaded from config/weights.json.
+
+    Worth having: 'is the deployed worker using the weights I just
+    committed?' was previously only answerable by reading cold-start logs.
+    """
+    from agent import nodes
+    return {
+        "weights": nodes.CONFIDENCE_WEIGHTS,
+        "threshold": nodes.CONFIDENCE_THRESHOLD,
+        "source_ref": os.environ.get("DAG_SOURCE_REF") or "(repo default branch)",
+    }
+
+
+@app.post("/weights/reload")
+async def weights_reload():
+    from agent import nodes
+    return {"weights": nodes.reload_confidence_weights()}
 
 
 @app.get("/status-check")
