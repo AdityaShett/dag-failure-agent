@@ -1,24 +1,46 @@
-import json, sys, uuid
+import argparse
+import json
 from google.cloud import pubsub_v1
 
-publisher = pubsub_v1.PublisherClient()
-topic_path = publisher.topic_path("dag-failure-agent-505623", "dagfailures-processing")
+PROJECT_ID = "dag-failure-agent-505623"
+TOPIC_ID = "dagfailures-processing"
 
-def publish(dag_id, task_id, target_file, logs, github_repo="AdityaShett/dag-failure-agent"):
+def publish_message(args):
+    log_content = None
+    if args.log_file:
+        with open(args.log_file, "r", encoding="utf-8") as f:
+            log_content = f.read()
+
     payload = {
-        "dag_id": dag_id,
-        "task_id": task_id,
-        "run_id": f"e2e-test-{uuid.uuid4().hex[:8]}",
-        "try_number": 1,
-        "github_repo": github_repo,
-        "target_file": target_file,
-        "synthetic_task_logs": logs,
+        "dag_id": args.dag_id,
+        "task_id": args.task_id,
+        "run_id": args.run_id,
+        "target_file": args.target_file,
+        "synthetic_task_logs": log_content or "sample log for verification",
+        "github_repo": args.github_repo,
     }
-    future = publisher.publish(topic_path, json.dumps(payload).encode("utf-8"))
-    print(f"[{dag_id}.{task_id}] run_id={payload['run_id']} msg_id={future.result()}")
+
+    # Clean out empty/None values
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    publisher_client = pubsub_v1.PublisherClient()
+    topic_path = publisher_client.topic_path(PROJECT_ID, TOPIC_ID)
+
+    # Encode strictly as valid JSON bytes
+    data = json.dumps(payload).encode("utf-8")
+    future = publisher_client.publish(topic_path, data)
+    
+    # Enforce timeout to prevent silent gRPC hangs
+    print(f"Published message ID: {future.result(timeout=30)}")
 
 if __name__ == "__main__":
-    dag_id, task_id, target_file, log_file = sys.argv[1:5]
-    with open(log_file) as f:
-        logs = f.read()
-    publish(dag_id, task_id, target_file, logs)
+    parser = argparse.ArgumentParser(description="Publish dynamic test message to Pub/Sub.")
+    parser.add_argument("dag_id", help="DAG identifier")
+    parser.add_argument("task_id", help="Task identifier")
+    parser.add_argument("target_file", help="Path to target python DAG file")
+    parser.add_argument("log_file", nargs="?", default=None, help="Path to log file (optional)")
+    parser.add_argument("--run-id", default="manual-cli-test", help="Airflow run ID")
+    parser.add_argument("--github-repo", default="AdityaShett/dag-failure-agent", help="GitHub repo (owner/repo)")
+
+    args = parser.parse_args()
+    publish_message(args)

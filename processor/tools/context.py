@@ -2,6 +2,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 from google.cloud import logging as cloud_logging
+from google.api_core.exceptions import ResourceExhausted
 
 
 def _parse_failure_time_from_run_id(run_id: str) -> datetime:
@@ -17,30 +18,35 @@ def _parse_failure_time_from_run_id(run_id: str) -> datetime:
         return datetime.now(timezone.utc)
 
 
-def fetch_task_logs(dag_id: str, task_id: str, run_id: str, window_minutes: int = 15) -> str:
-    project = os.environ.get("GCP_PROJECT") or os.environ["PROJECT_ID"]
-    client = cloud_logging.Client(project=project)
+def fetch_task_logs(filter_str: str) -> str:
+    """Fetches task logs from Google Cloud Logging with exponential backoff for rate limits."""
+    client = cloud_logging.Client()
+    max_retries = 5
+    base_delay = 2
 
-    failure_time = _parse_failure_time_from_run_id(run_id)
-    start = (failure_time - timedelta(minutes=window_minutes)).isoformat()
-    end = (failure_time + timedelta(minutes=1)).isoformat()
+    for attempt in range(max_retries):
+        try:
+            entries = list(
+                client.list_entries(
+                    filter_=filter_str,
+                    order_by=cloud_logging.DESCENDING,
+                    max_results=200,
+                )
+            )
+            if entries:
+                lines = [str(e.payload) for e in entries]
+                return "\n".join(reversed(lines))
+            return ""
+        except ResourceExhausted as e:
+            if attempt == max_retries - 1:
+                raise e
+            sleep_time = base_delay * (2 ** attempt)
+            time.sleep(sleep_time)
+        except Exception:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(base_delay * (2 ** attempt))
 
-    filter_str = (
-        'resource.type="cloud_composer_environment" '
-        f'AND labels."workflow"="{dag_id}" '
-        f'AND labels."task-id"="{task_id}" '
-        f'AND timestamp>="{start}" AND timestamp<="{end}"'
-    )
-
-    for attempt in range(3):
-        entries = list(client.list_entries(
-            filter_=filter_str, order_by=cloud_logging.DESCENDING, max_results=200
-        ))
-        if entries:
-            lines = [str(e.payload) for e in entries]
-            return "\n".join(reversed(lines))
-        if attempt < 2:
-            time.sleep(10)
     return ""
 
 

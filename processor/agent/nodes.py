@@ -32,7 +32,7 @@ def _get_bq_client():
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro",
+    model=os.environ.get("GEMINI_MODEL_NAME", "gemini-2.5-flash"),
     vertexai=True,
     temperature=0.7,
     project=PROJECT_ID,

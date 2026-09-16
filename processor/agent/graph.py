@@ -14,9 +14,8 @@ from agent.pr import open_draft_pr
 def route_after_fix(state: RCAState) -> str:
     if state.get("proposed_fix", "").strip().startswith("NO_CONFIDENT_FIX"):
         return "notify_human_no_fix"
-    if state.get("confidence_tier") == "low":
-        return "notify_human_no_fix"
     return "open_pr"
+
 
 def notify_human_no_fix(state: RCAState) -> dict:
     print(
@@ -25,7 +24,7 @@ def notify_human_no_fix(state: RCAState) -> dict:
         f"tier={state.get('confidence_tier')}\n"
         f"root_cause={state.get('root_cause')}"
     )
-    _mark_confidence_no_pr(state.get("confidence_record_id"))   # add this line
+    _mark_confidence_no_pr(state.get("confidence_record_id"))
     return {}
 
 graph = StateGraph(RCAState)

@@ -9,6 +9,7 @@ from google.cloud import bigquery
 from unidiff.errors import UnidiffParseError
 from agent.diff_utils import apply_unified_diff
 from agent.repo_config import get_github_token
+from agent.cost_utils import summarize_run_cost
 
 _outcomes_client = gcs_storage.Client()
 _OUTCOMES_BUCKET = os.environ.get("OUTCOMES_BUCKET")
@@ -17,6 +18,11 @@ _bq_client = bigquery.Client()
 _PROJECT_ID = os.environ.get("GCP_PROJECT")
 _BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
 _CONFIDENCE_OUTCOMES_TABLE = f"{_PROJECT_ID}.{_BQ_DATASET}.confidence_outcomes"
+
+# Task 3a: this must match the MODEL_NAME in nodes.py, since that's whose
+# usage_metadata we're pricing here. Kept as one constant instead of two so
+# a future model swap can't update one file and silently mis-price the other.
+_MODEL_NAME_FOR_COST = os.environ.get("GEMINI_MODEL_NAME", "gemini-2.5-flash")
 
 
 def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, proposed_fix,
@@ -63,6 +69,41 @@ def _record_pr_opened_signal(confidence_record_id, pr_number, diff_applied, fall
             print(f"WARNING: confidence_outcomes 'opened' insert failed: {errors}")
     except Exception as e:
         print(f"WARNING: failed to record PR-opened signal: {e!r}")
+
+
+def _build_title_prefix(confidence_tier: str, diff_applied: bool) -> str:
+    """
+    TASK 1 FIX -- title is now driven by confidence tier, always, not by
+    diff_applied.
+
+    What was happening before: the prefix was chosen almost entirely by
+    diff_applied ("[agent][fallback-no-fix]" whenever the diff didn't apply
+    cleanly, regardless of how confident the model was in the underlying
+    fix). In a 48-PR batch, 46 diffs failed to apply against the real file
+    -- for reasons unrelated to confidence -- so 46 PRs all got the same
+    "fallback-no-fix" label and the confidence tier was invisible on the
+    PR list. Only the 2 PRs whose diffs happened to apply showed a
+    meaningful title.
+
+    Fix: the tier (low / medium / high) is now always the headline label,
+    since that's the number a human reviewer actually wants to triage by.
+    Whether the diff applied is still surfaced -- both the PR body (see
+    `diff_applied` line below) and this small bracketed tag -- because
+    hiding a fallback commit under a normal-looking title is exactly the
+    dag6.py-style incident the old labeling was built to prevent. This
+    keeps that guarantee while fixing the triage problem: nothing merges
+    under a title that hides whether real code changed.
+
+    If your team decides the bracketed tag is still too noisy, the single
+    line to delete is marked below -- but don't remove the underlying
+    `diff_applied` field from the PR body, since that's the actual safety
+    signal.
+    """
+    tier = confidence_tier if confidence_tier in ("low", "medium", "high") else "unknown"
+    prefix = f"[agent][{tier}-confidence]"
+    if not diff_applied:
+        prefix += " [no-diff-applied]"  # <- delete this line only if you want to drop the honesty tag
+    return prefix
 
 
 def open_draft_pr(state: dict) -> dict:
@@ -121,16 +162,21 @@ def open_draft_pr(state: dict) -> dict:
             content=patched_source, sha=contents.sha, branch=branch_name,
         )
 
-        # Fallback PRs are now ALWAYS labeled honestly, regardless of
-        # confidence tier -- this is what directly prevents another
-        # dag6.py-style incident (a fallback-filler PR merged under a
-        # normal-looking title).
-        if not diff_applied:
-            title_prefix = "[agent][fallback-no-fix]"
-        elif state.get("confidence_tier") == "medium":
-            title_prefix = "[agent][medium-confidence]"
-        else:
-            title_prefix = "[agent]"
+        title_prefix = _build_title_prefix(state.get("confidence_tier"), diff_applied)
+
+        # TASK 3b -- estimated LLM cost for this run, in USD and CAD.
+        # root_cause_usage / generate_fix_usage are populated by nodes.py's
+        # analyze_root_cause() and generate_fix() respectively (see
+        # cost_utils.extract_usage). Both keys land on this same state dict
+        # automatically since LangGraph merges each node's returned fields
+        # into the shared run state -- no graph.py change needed for this
+        # part. If either key is missing (e.g. that node errored before
+        # returning usage), it's treated as zero tokens rather than crashing
+        # PR creation over a cost estimate.
+        cost = summarize_run_cost(
+            _MODEL_NAME_FOR_COST,
+            [state.get("root_cause_usage"), state.get("generate_fix_usage")],
+        )
 
         pr_body = (
             f"## Automated Root Cause Analysis\n\n{state.get('root_cause', 'No RCA available')}\n\n"
@@ -139,6 +185,10 @@ def open_draft_pr(state: dict) -> dict:
             f"**Diff applied:** {diff_applied}"
             + (f" ({fallback_reason})" if fallback_reason else "")
             + "\n\n"
+            f"**Estimated LLM cost:** ${cost['cost_usd']:.5f} USD (~${cost['cost_cad']:.5f} CAD) "
+            f"-- {cost['input_tokens']} input / {cost['output_tokens']} output tokens "
+            f"on {_MODEL_NAME_FOR_COST}. Rates and FX are estimates from config/pricing.json, "
+            f"not a billed invoice figure.\n\n"
             f"**This Pull Request was opened automatically. A human review is required before merging.**\n\n"
             f"Run: `{state['run_id']}`\nTask: `{state['task_id']}`"
         )
@@ -161,9 +211,6 @@ def open_draft_pr(state: dict) -> dict:
             state.get("confidence_record_id"), pr.number, diff_applied, fallback_reason,
         )
 
-        # Previously returned nothing -- processor_app.py's result.get("pr_url")
-        # was always None (§6.2). Now returns both pr_url and diff_applied so
-        # downstream code/state can act on whether a real fix was applied.
         return {"pr_url": pr.html_url, "diff_applied": diff_applied}
 
     except Exception as e:
