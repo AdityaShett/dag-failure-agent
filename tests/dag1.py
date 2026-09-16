@@ -1,26 +1,44 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+"""
+DAG 1: Schema / Column Drift
+Failure mode: KeyError caused by an upstream schema change (a column was
+renamed before this task's transform logic runs).
+Expected agent outcome: PR_CREATED (easy / high-confidence fix).
+"""
 from datetime import datetime
 
-CONFIG = {"dataset": "customer_events", "format": "parquet", "region": "us-central1"}
+import pandas as pd
+from airflow import DAG
+from airflow.operators.python import PythonOperator
 
-def extract_source_data(**context):
-    context["ti"].xcom_push(key="raw_path", value="gs://raw/customer_events/2026-08-30/")
 
 def load_dataset(**context):
-    # --- BUG (intentional): mistyped dictionary key ---
-    dataset_name = CONFIG["dataset"]  # should be CONFIG["dataset"]
-    print(f"Loading dataset: {dataset_name} ({CONFIG['format']}) from {CONFIG['region']}")
+    # Upstream extract step. In production this reads from a warehouse
+    # table; here it simulates the schema drift: the source system
+    # renamed "user_id" -> "uid" but this DAG was not updated.
+    data = {
+        "uid": [101, 102, 103],
+        "event_type": ["click", "view", "purchase"],
+        "amount": [0.0, 0.0, 49.99],
+    }
+    df = pd.DataFrame(data)
+    context["ti"].xcom_push(key="raw_df", value=df.to_dict())
 
-def transform_dataset(**context):
-    print("Applying schema normalization")
 
-def aggregate_regions(**context):
-    print("Aggregating by region")
+def transform_data(**context):
+    raw = context["ti"].xcom_pull(key="raw_df", task_ids="load_dataset")
+    df = pd.DataFrame(raw)
+    user_ids = df["user_id"].tolist()
+    print(f"Processed {len(user_ids)} user records")
 
-with DAG("dag1", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-    t1 = PythonOperator(task_id="extract_source_data", python_callable=extract_source_data)
-    t2 = PythonOperator(task_id="load_dataset", python_callable=load_dataset)
-    t3 = PythonOperator(task_id="transform_dataset", python_callable=transform_dataset)
-    t4 = PythonOperator(task_id="aggregate_regions", python_callable=aggregate_regions)
-    t1 >> t2 >> t3 >> t4
+
+with DAG(
+    dag_id="dag1",
+    description="Schema / Column Drift",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "schema-drift"],
+) as dag:
+    load = PythonOperator(task_id="load_dataset", python_callable=load_dataset)
+    transform = PythonOperator(task_id="transform_data", python_callable=transform_data)
+    load >> transform

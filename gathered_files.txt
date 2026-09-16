@@ -1,0 +1,4264 @@
+
+================================================================================
+FILE: .gitignore
+================================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#   Usually these files are written by a python script from a template
+#   before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+# Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+# uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+# poetry.lock
+# poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+# pdm.lock
+# pdm.toml
+.pdm-python
+.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+# pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# Redis
+*.rdb
+*.aof
+*.pid
+
+# RabbitMQ
+mnesia/
+rabbitmq/
+rabbitmq-data/
+
+# ActiveMQ
+activemq-data/
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#   JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#   be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#   and can be added to the global gitignore or merged into this file.  For a more nuclear
+#   option (not recommended) you can uncomment the following to ignore the entire idea folder.
+# .idea/
+
+# Abstra
+#   Abstra is an AI-powered process automation framework.
+#   Ignore directories containing user credentials, local state, and settings.
+#   Learn more at https://abstra.io/docs
+.abstra/
+
+# Visual Studio Code
+#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#   you could uncomment the following to ignore the entire vscode folder
+# .vscode/
+# Temporary file for partial code execution
+tempCodeRunnerFile.py
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Streamlit
+.streamlit/secrets.toml
+
+load-env.ps1
+
+tree.txt
+tree_ascii.txt
+
+
+================================================================================
+FILE: callbacks.py
+================================================================================
+
+from google.cloud import pubsub_v1
+import json
+import os
+import logging
+
+publisher = pubsub_v1.PublisherClient()
+
+topic_path = publisher.topic_path(
+    os.environ.get("GCP_PROJECT"),
+    "dagfailures"
+)
+
+CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "config.json"
+)
+
+with open(CONFIG_PATH, "r") as f:
+    config = json.load(f)
+
+def notify_on_failure(context):
+    ti = context["task_instance"]
+
+    message = {
+        "dag_id": ti.dag_id,
+        "task_id": ti.task_id,
+        "run_id": context["run_id"],
+        "try_number": ti.try_number,
+
+        "github_repo": config["github_repo"]
+
+    }
+
+    logging.info(f"Failure payload: {message}")
+
+    try:
+        future = publisher.publish(
+            topic_path,
+            json.dumps(message).encode("utf-8")
+        )
+
+        logging.info(
+            f"Published failure event: {future.result()}"
+        )
+
+    except Exception as e:
+        logging.exception(
+            f"Failed to publish Pub/Sub message: {e}"
+        )
+
+================================================================================
+FILE: cloudbuild.dashboard.yaml
+================================================================================
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.dashboard', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard'
+
+================================================================================
+FILE: cloudbuild.processor.yaml
+================================================================================
+
+﻿steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.processor', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-processor', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-processor'
+
+
+================================================================================
+FILE: cloudbuild.receiver.yaml
+================================================================================
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.receiver', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-receiver', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-receiver'
+
+
+================================================================================
+FILE: cloudbuild.webhook.yaml
+================================================================================
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.webhook', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-webhook', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-webhook'
+
+================================================================================
+FILE: confidence_outcomes_schema.json
+================================================================================
+
+[
+  {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "outcome", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "pr_number", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "updated_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+  {"name": "diff_applied", "type": "BOOLEAN", "mode": "NULLABLE"},
+  {"name": "fallback_reason", "type": "STRING", "mode": "NULLABLE"}
+]
+
+================================================================================
+FILE: confidence_signals_schema.json
+================================================================================
+
+[
+  {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "dag_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "task_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "run_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "s_llm", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_retrieval", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_history", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_logs", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "s_source", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "confidence_score", "type": "FLOAT64", "mode": "NULLABLE"},
+  {"name": "confidence_tier", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "pr_number", "type": "INTEGER", "mode": "NULLABLE"},
+  {"name": "outcome", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+  {"name": "updated_at", "type": "TIMESTAMP", "mode": "NULLABLE"}
+]
+
+================================================================================
+FILE: config\repos.json
+================================================================================
+
+{
+  "AdityaShett/dag-failure-agent": {
+    "token_secret": "github-token-personal",
+    "dag_path_template": "tests/{dag_id}.py"
+  },
+  "default": {
+    "token_secret": "github-token-personal",
+    "dag_path_template": "tests/{dag_id}.py"
+  }
+}
+
+================================================================================
+FILE: config\scenarios.json
+================================================================================
+
+{
+  "github_repo": "AdityaShett/dag-failure-agent",
+  "repeats_per_scenario": 1,
+  "scenarios": [
+    {
+      "scenario_id": "schema_drift_dag1",
+      "difficulty": "easy",
+      "dag_id": "dag1",
+      "task_id": "transform_data",
+      "code_file": "tests/dag1.py",
+      "log_file": "log_easy_schema.txt",
+      "failure_type": "KeyError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "macro_mismatch_dag2",
+      "difficulty": "easy",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "code_file": "tests/dag2.py",
+      "log_file": "log_easy_partition.txt",
+      "failure_type": "FileNotFoundError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "null_handling_dag3",
+      "difficulty": "medium",
+      "dag_id": "dag3",
+      "task_id": "clean_records",
+      "code_file": "tests/dag3.py",
+      "log_file": "log_medium_null.txt",
+      "failure_type": "AttributeError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "missing_import_dag4",
+      "difficulty": "medium",
+      "dag_id": "dag4",
+      "task_id": "score_engagement",
+      "code_file": "tests/dag4.py",
+      "log_file": "log_medium_import.txt",
+      "failure_type": "ModuleNotFoundError",
+      "expected_outcome": "PR_CREATED"
+    },
+    {
+      "scenario_id": "partner_outage_dag5",
+      "difficulty": "hard",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "code_file": "tests/dag5.py",
+      "log_file": "log_hard_partner.txt",
+      "failure_type": "HTTPError_500_external",
+      "expected_outcome": "NO_CONFIDENT_FIX"
+    },
+    {
+      "scenario_id": "ambiguous_log_dag6",
+      "difficulty": "hard",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "code_file": "tests/dag6.py",
+      "log_file": "log_hard_ambiguous.txt",
+      "failure_type": "no_stack_trace",
+      "expected_outcome": "NO_CONFIDENT_FIX"
+    }
+  ]
+}
+
+
+================================================================================
+FILE: config\weights.json
+================================================================================
+
+{
+  "_comment": "These weights control how the agent's confidence score is computed before it decides whether to open a PR. Each weight applies to a 0-1 sub-signal; scores are combined as a weighted sum and compared to confidence_threshold. Adjust these to tune precision (fewer, safer PRs) vs recall (more PRs, more risk of a bad fix).",
+
+  "signal_weights": {
+    "stack_trace_present": 0.30,
+    "line_number_matches_source": 0.25,
+    "known_fix_pattern_match": 0.25,
+    "log_completeness": 0.10,
+    "external_dependency_detected": -0.40
+  },
+
+  "confidence_threshold": 0.70,
+
+  "notes": {
+    "stack_trace_present": "1.0 if the log contains a full traceback, 0.0 if truncated/ambiguous (e.g. dag6).",
+    "line_number_matches_source": "1.0 if the traceback's file+line matches the current source exactly (guards against the dag3/dag4 style mismatches seen before).",
+    "known_fix_pattern_match": "1.0 if the exception type matches a pattern the agent has a template fix for (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError).",
+    "log_completeness": "Small bonus for logs with full timestamps/task context, penalizes sparse logs.",
+    "external_dependency_detected": "Negative weight — if the traceback bottoms out in a third-party library/network call (e.g. requests.HTTPError from an external host), this pulls confidence below threshold on purpose, since no code change here can fix it (dag5)."
+  }
+}
+
+
+================================================================================
+FILE: config.json
+================================================================================
+
+{
+    "github_repo": "AdityaShett/dag-failure-agent"
+}
+
+================================================================================
+FILE: dashboard\app.py
+================================================================================
+
+import os
+from typing import Optional
+
+import streamlit as st
+from google.cloud import bigquery
+import pandas as pd
+
+PROJECT = os.environ["GCP_PROJECT"]
+DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+
+client = bigquery.Client(project=PROJECT)
+
+st.set_page_config(page_title="DAG Failure Agent Dashboard", layout="wide")
+st.title("DAG Failure Agent — Status Dashboard")
+
+
+def safe_query(query: str, empty_msg: str) -> Optional[pd.DataFrame]:
+    """Runs a query defensively. This project's tables have repeatedly been
+    missing, empty, or mid-migration (see the diagnostic changelog) -- a bare
+    query here would take down the whole dashboard instead of just one panel.
+    """
+    try:
+        df = client.query(query).to_dataframe()
+    except Exception as e:
+        st.warning(
+            f"Couldn't load this section ({type(e).__name__}). "
+            f"The underlying table may not exist yet or the query needs a schema update."
+        )
+        return None
+    if df.empty:
+        st.info(empty_msg)
+        return None
+    return df
+
+
+@st.cache_data(ttl=60)
+def load_scored_runs() -> Optional[pd.DataFrame]:
+    # confidence_outcomes only ever holds record_id/outcome/pr_number/
+    # diff_applied/fallback_reason/updated_at -- dag_id, task_id, and the
+    # score/tier live on confidence_signals instead. A PR's lifecycle can
+    # produce more than one confidence_outcomes row over time (an "opened"
+    # row, then later a "merged"/"rejected" row), so we take only the
+    # latest row per record_id before joining.
+    query = f"""
+        WITH latest_outcome AS (
+            SELECT
+                record_id, outcome, pr_number, diff_applied, fallback_reason, updated_at,
+                ROW_NUMBER() OVER (PARTITION BY record_id ORDER BY updated_at DESC) AS rn
+            FROM `{PROJECT}.{DATASET}.confidence_outcomes`
+        )
+        SELECT
+            s.dag_id, s.task_id, s.confidence_score, s.confidence_tier, s.created_at,
+            o.outcome, o.pr_number, o.diff_applied, o.fallback_reason, o.updated_at
+        FROM `{PROJECT}.{DATASET}.confidence_signals` s
+        JOIN latest_outcome o ON o.record_id = s.record_id AND o.rn = 1
+        ORDER BY o.updated_at DESC
+        LIMIT 200
+    """
+    return safe_query(query, empty_msg="No scored runs with a recorded outcome yet.")
+
+
+@st.cache_data(ttl=60)
+def load_fix_history() -> Optional[pd.DataFrame]:
+    query = f"""
+        SELECT dag_id, task_id, outcome, COUNT(*) AS count
+        FROM `{PROJECT}.{DATASET}.fix_history`
+        GROUP BY dag_id, task_id, outcome
+        ORDER BY count DESC
+    """
+    return safe_query(query, empty_msg="No merged/rejected fix history recorded yet.")
+
+
+outcomes_df = load_scored_runs()
+
+st.subheader("Overview")
+col1, col2, col3, col4 = st.columns(4)
+
+if outcomes_df is not None:
+    total = len(outcomes_df)
+    merged = int((outcomes_df["outcome"] == "merged").sum())
+
+    # Fallback rate only makes sense among runs where a PR was actually
+    # opened -- diff_applied is set the moment a PR is created, so runs
+    # that never opened one (outcome == "no_pr", low confidence) correctly
+    # have no value here and are excluded rather than counted as 0%.
+    pr_opened_mask = outcomes_df["diff_applied"].notna()
+    prs_opened = int(pr_opened_mask.sum())
+    if prs_opened:
+        fallback_rate = (outcomes_df.loc[pr_opened_mask, "diff_applied"] == False).mean()
+        fallback_display = f"{fallback_rate:.0%}"
+    else:
+        fallback_display = "—"
+
+    col1.metric("Scored runs (recent)", total)
+    col2.metric("PRs opened", prs_opened)
+    col3.metric("Merged", merged)
+    col4.metric(
+        "Fallback rate", fallback_display,
+        help="Share of opened PRs where the diff couldn't be applied and a "
+             "placeholder fallback commit was used instead of a real fix.",
+    )
+else:
+    for c, label in zip((col1, col2, col3, col4),
+                        ("Scored runs (recent)", "PRs opened", "Merged", "Fallback rate")):
+        c.metric(label, "—")
+
+st.subheader("Recent scored runs")
+if outcomes_df is not None:
+    display_df = outcomes_df.copy()
+    display_df["outcome"] = display_df["outcome"].replace({
+        "opened": "PR open (awaiting review)",
+        "no_pr": "No PR (low confidence)",
+    })
+    st.dataframe(
+        display_df[[
+            "dag_id", "task_id", "confidence_tier", "confidence_score",
+            "outcome", "diff_applied", "pr_number", "updated_at",
+        ]],
+        use_container_width=True,
+    )
+
+st.subheader("Fix history by DAG/task")
+history_df = load_fix_history()
+if history_df is not None:
+    # st.bar_chart on a 2-level MultiIndex renders inconsistently -- collapse
+    # dag_id/task_id into one label column instead.
+    history_df["dag_task"] = history_df["dag_id"] + " / " + history_df["task_id"]
+    st.bar_chart(history_df.set_index("dag_task")["count"])
+
+================================================================================
+FILE: dashboard\cloudbuild.dashboard.yaml
+================================================================================
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'dashboard/Dockerfile.dashboard', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard', '.']
+images:
+- 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/dag-failure-agent/dag-failure-dashboard'
+
+================================================================================
+FILE: dashboard\Dockerfile.dashboard
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY dashboard/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY dashboard/ ./dashboard/
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD streamlit run dashboard/app.py --server.port=8080 --server.address=0.0.0.0
+
+================================================================================
+FILE: dashboard\requirements.txt
+================================================================================
+
+streamlit
+google-cloud-bigquery
+pandas
+db-dtypes
+
+================================================================================
+FILE: dashboard-env.yaml
+================================================================================
+
+GCP_PROJECT: dag-failure-agent-505623
+BQ_DATASET: dag_failure_agent
+
+================================================================================
+FILE: dashboard-sa-key.json
+================================================================================
+
+
+
+================================================================================
+FILE: dashboard.html
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>dag-failure-agent — Benchmark Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0E1116;
+    --panel:#161A22;
+    --panel-2:#1C212B;
+    --border:#262C38;
+    --text:#E6E9EF;
+    --muted:#8A93A3;
+    --accent:#6C8CFF;
+    --ok:#5FBE8A;
+    --wait:#E0A458;
+    --bad:#E0616B;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    padding:32px 40px 60px;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:20px;
+    margin-bottom:28px;
+  }
+  h1{
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:13.5px;
+    max-width:560px;
+    line-height:1.5;
+  }
+  .load-controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .load-controls label{
+    border:1px solid var(--border);
+    background:var(--panel);
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--text);
+    font-size:12.5px;
+  }
+  .load-controls label:hover{ border-color:var(--accent); }
+  input[type=file]{ display:none; }
+  #sourceTag{ font-family:var(--mono); }
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+    margin-bottom:32px;
+  }
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+  }
+  .stat .n{
+    font-family:var(--mono);
+    font-size:26px;
+    font-weight:600;
+    line-height:1;
+  }
+  .stat .l{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .stat.ok .n{ color:var(--ok); }
+  .stat.wait .n{ color:var(--wait); }
+  .stat.bad .n{ color:var(--bad); }
+
+  section{ margin-bottom:34px; }
+  h2{
+    font-size:13px;
+    text-transform:none;
+    color:var(--muted);
+    font-weight:600;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  h2::after{
+    content:"";
+    height:1px;
+    flex:1;
+    background:var(--border);
+  }
+
+  .chart-wrap{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:20px 20px 8px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    font-size:13px;
+  }
+  thead th{
+    text-align:left;
+    font-weight:500;
+    color:var(--muted);
+    font-size:11.5px;
+    padding:10px 14px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  tbody td{
+    padding:11px 14px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--panel-2); }
+  td.mono, .mono{ font-family:var(--mono); }
+  td.dag{ color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+
+  .badge{
+    display:inline-block;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:11px;
+    font-family:var(--mono);
+    border:1px solid transparent;
+  }
+  .badge.diff-easy{ color:#8FB8FF; background:rgba(108,140,255,0.12); }
+  .badge.diff-medium{ color:var(--wait); background:rgba(224,164,88,0.12); }
+  .badge.diff-hard{ color:var(--muted); background:rgba(138,147,163,0.12); }
+
+  .outcome{ display:flex; align-items:center; gap:7px; font-size:12.5px; }
+  .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
+  .dot.ok{ background:var(--ok); }
+  .dot.wait{ background:var(--wait); }
+  .dot.bad{ background:var(--bad); }
+
+  a.pr-link{
+    color:var(--accent);
+    text-decoration:none;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  a.pr-link:hover{ text-decoration:underline; }
+  .none{ color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+
+  footer{
+    margin-top:30px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.6;
+    border-top:1px solid var(--border);
+    padding-top:16px;
+  }
+  footer code{
+    font-family:var(--mono);
+    background:var(--panel-2);
+    padding:1px 6px;
+    border-radius:4px;
+    border:1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>dag-failure-agent — Benchmark Results</h1>
+    <p>One row per published scenario run. Confidence scores are compared against <span class="mono" id="thresholdInline">threshold 0.70</span> from <code class="mono">config/weights.json</code> to decide whether a PR gets opened.</p>
+  </div>
+  <div class="load-controls">
+    <span id="sourceTag">source: sample results.json</span>
+    <label>Load results.json<input type="file" id="fileInput" accept="application/json" /></label>
+  </div>
+</header>
+
+<div class="stats" id="statsRow"></div>
+
+<section>
+  <h2>Confidence score by scenario</h2>
+  <div class="chart-wrap">
+    <canvas id="confChart" height="90"></canvas>
+  </div>
+</section>
+
+<section>
+  <h2>Run detail</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>DAG / Task</th>
+        <th>Difficulty</th>
+        <th>Failure type</th>
+        <th>Expected</th>
+        <th>Actual</th>
+        <th>Confidence</th>
+        <th>PR</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</section>
+
+<footer>
+  Expects an array of run objects with: <code>scenario_id, dag_id, task_id, difficulty, failure_type, expected_outcome, actual_outcome, confidence_score, pr_url</code>. Point your pipeline's <code>results/results.json</code> (written after each publish_batch_diverse.py batch) at this file, or use "Load results.json" to inspect any run's output locally.
+</footer>
+
+<script>
+const SAMPLE_RESULTS = [
+  {
+    "run_id": "run-schema_drift_dag1-20260910T031230Z-a1b2c3d4",
+    "scenario_id": "schema_drift_dag1",
+    "dag_id": "dag1",
+    "difficulty": "easy",
+    "failure_type": "KeyError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.93,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/101",
+    "timestamp": "2026-09-10T03:12:45Z"
+  },
+  {
+    "run_id": "run-macro_mismatch_dag2-20260910T031400Z-b2c3d4e5",
+    "scenario_id": "macro_mismatch_dag2",
+    "dag_id": "dag2",
+    "difficulty": "easy",
+    "failure_type": "FileNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.88,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/102",
+    "timestamp": "2026-09-10T03:14:10Z"
+  },
+  {
+    "run_id": "run-null_handling_dag3-20260910T031615Z-c3d4e5f6",
+    "scenario_id": "null_handling_dag3",
+    "dag_id": "dag3",
+    "difficulty": "medium",
+    "failure_type": "AttributeError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.79,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/103",
+    "timestamp": "2026-09-10T03:16:22Z"
+  },
+  {
+    "run_id": "run-missing_import_dag4-20260910T031802Z-d4e5f6a7",
+    "scenario_id": "missing_import_dag4",
+    "dag_id": "dag4",
+    "difficulty": "medium",
+    "failure_type": "ModuleNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.81,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/104",
+    "timestamp": "2026-09-10T03:18:09Z"
+  },
+  {
+    "run_id": "run-partner_outage_dag5-20260910T032040Z-e5f6a7b8",
+    "scenario_id": "partner_outage_dag5",
+    "dag_id": "dag5",
+    "difficulty": "hard",
+    "failure_type": "HTTPError_500_external",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.22,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:21:20Z"
+  },
+  {
+    "run_id": "run-ambiguous_log_dag6-20260910T032355Z-f6a7b8c9",
+    "scenario_id": "ambiguous_log_dag6",
+    "dag_id": "dag6",
+    "difficulty": "hard",
+    "failure_type": "no_stack_trace",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.11,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:24:15Z"
+  }
+];
+const CONFIDENCE_THRESHOLD = 0.70;
+
+let chartInstance = null;
+
+function outcomeDotClass(row){
+  if (row.actual_outcome !== row.expected_outcome) return 'bad';
+  return row.actual_outcome === 'PR_CREATED' ? 'ok' : 'wait';
+}
+
+function render(results){
+  // --- stats row ---
+  const total = results.length;
+  const created = results.filter(r => r.actual_outcome === 'PR_CREATED').length;
+  const noFix = results.filter(r => r.actual_outcome === 'NO_CONFIDENT_FIX').length;
+  const mismatched = results.filter(r => r.actual_outcome !== r.expected_outcome).length;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="l">Scenarios run</div></div>
+    <div class="stat ok"><div class="n">${created}</div><div class="l">PRs created</div></div>
+    <div class="stat wait"><div class="n">${noFix}</div><div class="l">No confident fix</div></div>
+    <div class="stat ${mismatched ? 'bad' : ''}"><div class="n">${mismatched}</div><div class="l">Unexpected outcome</div></div>
+  `;
+
+  // --- table ---
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = results.map(r => `
+    <tr>
+      <td class="mono">${r.scenario_id}</td>
+      <td class="dag">${r.dag_id}${r.task_id ? ' · ' + r.task_id : ''}</td>
+      <td><span class="badge diff-${r.difficulty || 'medium'}">${r.difficulty || '—'}</span></td>
+      <td class="mono" style="color:var(--muted); font-size:12.5px;">${r.failure_type || '—'}</td>
+      <td class="mono" style="font-size:12.5px; color:var(--muted);">${r.expected_outcome}</td>
+      <td>
+        <div class="outcome">
+          <span class="dot ${outcomeDotClass(r)}"></span>
+          <span class="mono" style="font-size:12.5px;">${r.actual_outcome}</span>
+        </div>
+      </td>
+      <td class="mono">${(r.confidence_score ?? 0).toFixed(2)}</td>
+      <td>${r.pr_url ? `<a class="pr-link" href="${r.pr_url}" target="_blank">#${r.pr_url.split('/').pop()}</a>` : '<span class="none">—</span>'}</td>
+    </tr>
+  `).join('');
+
+  // --- chart ---
+  const ctx = document.getElementById('confChart');
+  const labels = results.map(r => r.scenario_id.replace(/_/g, ' '));
+  const scores = results.map(r => r.confidence_score ?? 0);
+  const colors = results.map(r => {
+    if (r.actual_outcome !== r.expected_outcome) return '#E0616B';
+    return r.actual_outcome === 'PR_CREATED' ? '#5FBE8A' : '#E0A458';
+  });
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: scores,
+        backgroundColor: colors,
+        borderRadius: 4,
+        maxBarThickness: 34,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => `confidence ${item.raw.toFixed(2)}`
+          }
+        },
+        annotation: undefined,
+      },
+      scales: {
+        x: {
+          min: 0, max: 1,
+          grid: { color: '#262C38' },
+          ticks: { color: '#8A93A3', font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#E6E9EF', font: { family: 'IBM Plex Mono', size: 11.5 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'thresholdLine',
+      afterDraw(chart){
+        const {ctx, chartArea, scales} = chart;
+        const x = scales.x.getPixelForValue(CONFIDENCE_THRESHOLD);
+        ctx.save();
+        ctx.strokeStyle = '#6C8CFF';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      document.getElementById('sourceTag').textContent = `source: ${file.name}`;
+      render(data);
+    } catch (err) {
+      alert('Could not parse that file as JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+render(SAMPLE_RESULTS);
+</script>
+</body>
+</html>
+
+
+================================================================================
+FILE: Dockerfile
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+ENV PYTHONPATH=/app:/app/processor
+EXPOSE 8080
+
+CMD ["uvicorn", "processor.processor_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+================================================================================
+FILE: Dockerfile.dashboard
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY dashboard/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY dashboard/ ./dashboard/
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD streamlit run dashboard/app.py --server.port=8080 --server.address=0.0.0.0 --server.headless=true
+
+================================================================================
+FILE: Dockerfile.processor
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+ENV PYTHONPATH=/app:/app/processor
+EXPOSE 8080
+
+CMD ["uvicorn", "processor.processor_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+================================================================================
+FILE: Dockerfile.receiver
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+ENV PYTHONPATH=/app:/app/receiver
+EXPOSE 8080
+
+CMD ["uvicorn", "receiver.receiver_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+
+================================================================================
+FILE: Dockerfile.webhook
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+ENV PYTHONPATH=/app:/app/webhook
+EXPOSE 8080
+
+CMD ["uvicorn", "webhook.github_webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+
+================================================================================
+FILE: env-vars.yaml
+================================================================================
+
+﻿GCP_PROJECT: dag-failure-agent-505623
+GCP_LOCATION: us-central1
+BQ_DATASET: dag_failure_agent
+OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+REPO_CONFIG_PATH: config/repos.json
+GEMINI_MODEL_NAME: gemini-2.5-flash
+
+
+
+================================================================================
+FILE: fix_history_schema.json
+================================================================================
+
+[
+  {"name": "record_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "dag_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "task_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "run_id", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "root_cause", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "proposed_fix", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "outcome", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "created_at", "type": "TIMESTAMP", "mode": "REQUIRED"},
+  {"name": "embedding", "type": "FLOAT64", "mode": "REPEATED"}
+]
+
+================================================================================
+FILE: load-env.ps1
+================================================================================
+
+﻿$env:GCP_PROJECT = "dag-failure-agent-505623"
+$env:GCP_LOCATION = "northamerica-northeast2"
+$env:GITHUB_TOKEN = "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"
+
+
+================================================================================
+FILE: main.py
+================================================================================
+
+import os
+import base64
+import json
+from datetime import datetime, timezone
+from fastapi import FastAPI, Request
+
+from agent.graph import app as agent_graph
+
+api = FastAPI()
+
+
+@api.post("/pubsub-push")
+async def handle_pubsub_push(request: Request):
+    envelope = await request.json()
+    print(f"Received envelope: {envelope}")
+
+    pubsub_message = envelope["message"]
+
+    raw_data = base64.b64decode(
+        pubsub_message["data"]
+    ).decode("utf-8")
+
+    payload = json.loads(raw_data)
+
+    publish_time = datetime.fromisoformat(
+        pubsub_message["publishTime"].replace("Z", "+00:00")
+    )
+
+    age_minutes = (
+        datetime.now(timezone.utc) - publish_time
+    ).total_seconds() / 60
+
+    # Ignore stale messages older than 10 minutes
+    if age_minutes > 10:
+        print(
+            f"Skipping stale message. "
+            f"Age={age_minutes:.1f} minutes"
+        )
+        return {"status": "stale"}
+
+    dag_id = payload.get("dag_id")
+    github_repo = payload.get("github_repo")
+
+    ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "").split(",") if os.environ.get("ALLOWED_DAG_IDS") else None
+    if ALLOWED_DAG_IDS and dag_id not in ALLOWED_DAG_IDS:
+        print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
+        return {"status": "ignored_dag"}
+
+    # Use target_file from payload if provided (e.g. synthetic/manual test
+    # runs), otherwise fall back to the automatic DAG -> file mapping.
+    target_file = payload.get("target_file") or f"tests/{dag_id}.py"
+
+    print(f"Decoded payload: {payload}")
+    print(f"DAG={dag_id}")
+    print(f"REPO={github_repo}")
+    print(f"FILE={target_file}")
+
+    result = agent_graph.invoke(
+        {
+            "dag_id": dag_id,
+            "task_id": payload.get("task_id"),
+            "run_id": payload.get("run_id"),
+            "try_number": payload.get("try_number", 1),
+            "github_repo": github_repo,
+            "target_file": target_file,
+            "synthetic_task_logs": payload.get("synthetic_task_logs"),
+        }
+    )
+
+    print(f"Graph result: {result}")
+
+    return {
+        "status": "processed",
+        "pr_url": result.get("pr_url"),
+    }
+
+================================================================================
+FILE: processor\agent\__init__.py
+================================================================================
+
+
+
+================================================================================
+FILE: processor\agent\cost_utils.py
+================================================================================
+
+"""
+cost_utils.py -- token-cost estimation for the LLM calls made in nodes.py.
+
+Why this exists: task 3 asks for a per-PR token-cost line in USD and CAD.
+Two numbers drive that estimate (Gemini $/1M tokens, and the USD->CAD rate)
+and both of them change over time independently of any code change here, so
+neither is hardcoded in this file -- they're read from config/pricing.json,
+with an in-code fallback only for the case where that file is missing.
+
+This module knows nothing about LangGraph state or PRs. It only converts a
+model name + token counts into a cost. nodes.py calls extract_usage() right
+after each LLM call; pr.py calls summarize_run_cost() once, at PR-body build
+time, on whatever usage dicts nodes.py has already put into state.
+"""
+import os
+import json
+
+PRICING_CONFIG_PATH = os.environ.get("PRICING_CONFIG_PATH", "config/pricing.json")
+
+# Fallback only -- used if config/pricing.json is missing or malformed, so a
+# broken config file degrades to an approximate estimate instead of crashing
+# a live run. Keep this roughly in sync with the real file; don't treat it
+# as the source of truth for pricing.
+_DEFAULT_PRICING = {
+    "gemini-2.5-flash": {"input_per_million_usd": 0.30, "output_per_million_usd": 2.50},
+    "usd_to_cad_rate": 1.39,
+}
+
+_PRICING_CACHE = None
+
+
+def _load_pricing() -> dict:
+    global _PRICING_CACHE
+    if _PRICING_CACHE is not None:
+        return _PRICING_CACHE
+    try:
+        with open(PRICING_CONFIG_PATH, "r") as f:
+            _PRICING_CACHE = json.load(f)
+        print(f"Loaded pricing config from {PRICING_CONFIG_PATH}")
+    except Exception as e:
+        print(f"WARNING: could not load {PRICING_CONFIG_PATH} ({e!r}); using built-in default pricing")
+        _PRICING_CACHE = _DEFAULT_PRICING
+    return _PRICING_CACHE
+
+
+def extract_usage(response) -> dict:
+    """Pulls token counts off a langchain-google-genai AIMessage. Returns
+    zeros (never None) so downstream summing never has to null-check."""
+    usage = getattr(response, "usage_metadata", None) or {}
+    return {
+        "input_tokens": usage.get("input_tokens", 0) or 0,
+        "output_tokens": usage.get("output_tokens", 0) or 0,
+    }
+
+
+def estimate_cost_usd(model_name: str, input_tokens: int, output_tokens: int) -> float:
+    pricing = _load_pricing()
+    rates = pricing.get(model_name, _DEFAULT_PRICING["gemini-2.5-flash"])
+    return (
+        input_tokens / 1_000_000 * rates["input_per_million_usd"]
+        + output_tokens / 1_000_000 * rates["output_per_million_usd"]
+    )
+
+
+def usd_to_cad(amount_usd: float) -> float:
+    pricing = _load_pricing()
+    rate = pricing.get("usd_to_cad_rate", _DEFAULT_PRICING["usd_to_cad_rate"])
+    return amount_usd * rate
+
+
+def summarize_run_cost(model_name: str, usages: list) -> dict:
+    """usages: list of usage dicts from extract_usage(), one per LLM call
+    made during this run (currently: root-cause analysis + fix generation).
+    Missing/empty entries are treated as zero rather than skipped, so a
+    partially-failed run still reports a (possibly partial) cost instead of
+    silently omitting the line."""
+    total_in = sum((u or {}).get("input_tokens", 0) for u in usages)
+    total_out = sum((u or {}).get("output_tokens", 0) for u in usages)
+    cost_usd = estimate_cost_usd(model_name, total_in, total_out)
+    cost_cad = usd_to_cad(cost_usd)
+    return {
+        "input_tokens": total_in,
+        "output_tokens": total_out,
+        "cost_usd": round(cost_usd, 5),
+        "cost_cad": round(cost_cad, 5),
+    }
+
+================================================================================
+FILE: processor\agent\diff_utils.py
+================================================================================
+
+import re
+from unidiff import PatchSet
+
+
+def sanitize_diff_text(diff_text: str) -> str:
+    """
+    Cleans up common LLM-diff-generation artifacts before parsing.
+
+    Confirmed in this project's processor logs: Gemini's raw diff output
+    routinely arrives wrapped in ```diff / ``` fences, and blank context
+    lines inside hunks sometimes drop their required leading space. Both
+    cause PatchSet(...) to raise or misparse hunk boundaries.
+    """
+    if not diff_text:
+        return diff_text
+
+    text = diff_text.strip()
+
+    # Strip ALL leading/trailing fence lines, not just one layer. Confirmed
+    # in real PRs (#317-319): Gemini sometimes emits doubled/nested fences
+    # (```diff\n```diff\n<diff>\n```\n```), and a single regex substitution
+    # left one fence layer behind, which is exactly what caused those PRs'
+    # UnidiffParseError: Hunk is shorter than expected.
+    while True:
+        new_text = re.sub(r"^```(?:diff|patch)?\s*\n", "", text)
+        if new_text == text:
+            break
+        text = new_text
+
+    while True:
+        new_text = re.sub(r"\n?```\s*$", "", text)
+        if new_text == text:
+            break
+        text = new_text
+
+    # Repair blank context lines: inside a hunk, a completely empty line
+    # must retain its required leading space, which markdown renderers and
+    # LLMs routinely strip.
+    lines = text.split("\n")
+    repaired = []
+    in_hunk = False
+    for line in lines:
+        if line.startswith("@@"):
+            in_hunk = True
+            repaired.append(line)
+            continue
+        if in_hunk and line == "":
+            repaired.append(" ")
+        else:
+            repaired.append(line)
+    return "\n".join(repaired)
+
+
+def _locate_hunk(lines, expected, hint_start):
+    n = len(expected)
+    if n == 0:
+        return hint_start
+    expected_norm = [e.rstrip("\n") for e in expected]
+
+    candidate = lines[hint_start:hint_start + n]
+    if [l.rstrip("\n") for l in candidate] == expected_norm:
+        return hint_start
+
+    for start in range(len(lines) - n + 1):
+        window = [l.rstrip("\n") for l in lines[start:start + n]]
+        if window == expected_norm:
+            return start
+
+    return None
+
+
+def apply_unified_diff(original_content: str, diff_text: str) -> str:
+    if diff_text.strip() == "NO_CONFIDENT_FIX":
+        return original_content
+
+    diff_text = sanitize_diff_text(diff_text)
+
+    path = PatchSet(diff_text)
+    lines = original_content.splitlines(keepends=True)
+
+    for patched_file in path:
+        for hunk in patched_file:
+            hint_start = hunk.source_start - 1
+            expected = [line.value for line in hunk if not line.is_added]
+
+            start = _locate_hunk(lines, expected, hint_start)
+            if start is None:
+                raise ValueError(
+                    f"Diff context not found anywhere in file (hunk claimed "
+                    f"line {hunk.source_start}): file content does not match "
+                    f"expected patch context."
+                )
+
+            new_lines = [line.value for line in hunk if not line.is_removed]
+            lines[start:start + hunk.source_length] = new_lines
+
+    return "".join(lines)
+
+================================================================================
+FILE: processor\agent\graph.py
+================================================================================
+
+from langgraph.graph import StateGraph, START, END
+from agent.state import RCAState
+from agent.nodes import (
+    collect_context,
+    retrieve_knowledge,
+    analyze_root_cause,
+    generate_fix,
+    compute_confidence,
+    _mark_confidence_no_pr,
+)
+from agent.pr import open_draft_pr
+
+
+def route_after_fix(state: RCAState) -> str:
+    if state.get("proposed_fix", "").strip().startswith("NO_CONFIDENT_FIX"):
+        return "notify_human_no_fix"
+    return "open_pr"
+
+
+def notify_human_no_fix(state: RCAState) -> dict:
+    print(
+        f"NOTIFY: dag={state.get('dag_id')} task={state.get('task_id')} "
+        f"confidence_score={state.get('confidence_score')} "
+        f"tier={state.get('confidence_tier')}\n"
+        f"root_cause={state.get('root_cause')}"
+    )
+    _mark_confidence_no_pr(state.get("confidence_record_id"))
+    return {}
+
+graph = StateGraph(RCAState)
+graph.add_node("collect_context", collect_context)
+graph.add_node("retrieve_knowledge", retrieve_knowledge)
+graph.add_node("analyze_root_cause", analyze_root_cause)
+graph.add_node("generate_fix", generate_fix)
+graph.add_node("compute_confidence", compute_confidence)
+graph.add_node("open_pr", open_draft_pr)
+graph.add_node("notify_human_no_fix", notify_human_no_fix)
+
+graph.add_edge(START, "collect_context")
+graph.add_edge("collect_context", "retrieve_knowledge")
+graph.add_edge("retrieve_knowledge", "analyze_root_cause")
+graph.add_edge("analyze_root_cause", "generate_fix")
+graph.add_edge("generate_fix", "compute_confidence")
+graph.add_conditional_edges("compute_confidence", route_after_fix, {
+    "open_pr": "open_pr",
+    "notify_human_no_fix": "notify_human_no_fix",
+})
+graph.add_edge("open_pr", END)
+graph.add_edge("notify_human_no_fix", END)
+
+app = graph.compile()
+
+================================================================================
+FILE: processor\agent\nodes.py
+================================================================================
+
+import os
+import re
+import json
+import uuid
+from datetime import datetime, timezone
+
+from google.cloud import bigquery
+from google.cloud import storage as gcs_storage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
+from tools.context import fetch_task_logs, fetch_dag_source
+
+from agent.diff_utils import apply_unified_diff
+from unidiff.errors import UnidiffParseError
+
+
+PROJECT_ID = os.environ.get("GCP_PROJECT")
+LOCATION = os.environ.get("GCP_LOCATION", "global")
+BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+BQ_TABLE = f"{PROJECT_ID}.{BQ_DATASET}.fix_history"
+CONFIDENCE_SIGNALS_TABLE = f"{PROJECT_ID}.{BQ_DATASET}.confidence_signals"
+
+_bq_client = None
+_outcomes_client_for_history = None
+
+
+def _get_bq_client():
+    global _bq_client
+    if _bq_client is None:
+        _bq_client = bigquery.Client(project=PROJECT_ID)
+    return _bq_client
+
+
+llm = ChatGoogleGenerativeAI(
+    model=os.environ.get("GEMINI_MODEL_NAME", "gemini-2.5-flash"),
+    vertexai=True,
+    temperature=0.7,
+    project=PROJECT_ID,
+    location=LOCATION,
+    max_output_tokens=8192,
+)
+
+
+def collect_context(state: dict) -> dict:
+    if state.get("synthetic_task_logs") is not None:
+        logs = state["synthetic_task_logs"]
+    else:
+        logs = fetch_task_logs(
+            state["dag_id"],
+            state["task_id"],
+            state["run_id"]
+        )
+
+    source = fetch_dag_source(
+        state["dag_id"],
+        state["github_repo"],
+        state["target_file"],
+    )
+
+    return {
+        "task_logs": logs,
+        "dag_source": source,
+    }
+
+
+def retrieve_knowledge(state: dict) -> dict:
+    try:
+        from langchain_google_vertexai import VertexAIEmbeddings
+
+        embeddings = VertexAIEmbeddings(model_name="text-embedding-005")
+
+        query_text = (
+            f"Airflow failure: {state['task_id']} "
+            f"in {state['dag_id']}. "
+            f"Logs: {state.get('task_logs', '')[-1500:]}"
+        )
+
+        query_embedding = embeddings.embed_query(query_text)
+
+        client = _get_bq_client()
+
+        sql = f"""
+            SELECT
+                root_cause,
+                proposed_fix,
+                outcome,
+                ML.DISTANCE(embedding, @query_embedding, 'COSINE') AS distance
+            FROM `{BQ_TABLE}`
+            WHERE outcome = 'merged'
+            ORDER BY distance ASC
+            LIMIT 5
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ArrayQueryParameter(
+                    "query_embedding", "FLOAT64", query_embedding
+                )
+            ]
+        )
+
+        results = client.query(sql, job_config=job_config).result()
+
+        hits = [
+            f"Root cause: {row.root_cause}\nFix: {row.proposed_fix}"
+            for row in results
+        ]
+
+        return {"retrieved_knowledge": hits}
+
+    except Exception as e:
+        print(f"BigQuery retrieval failed: {e}")
+        return {"retrieved_knowledge": []}
+
+
+def analyze_root_cause(state: dict) -> dict:
+    try:
+        knowledge = "\n---\n".join(
+            state.get("retrieved_knowledge", [])
+        )
+
+        prompt = [
+            SystemMessage(
+                content=(
+                    "You are an Airflow reliability engineer. "
+                    "Find the exact root cause. "
+                    "Point to the specific log lines and code lines "
+                    "that prove it. "
+                    "If unclear, say so instead of guessing."
+                )
+            ),
+            HumanMessage(
+                content=(
+                    f"DAG: {state['dag_id']} | "
+                    f"Task: {state['task_id']}\n\n"
+                    f"--- LOGS ---\n"
+                    f"{state.get('task_logs', '')[-4000:]}\n\n"
+                    f"--- DAG CODE ---\n"
+                    f"{state.get('dag_source', '')}\n\n"
+                    f"--- SIMILAR PAST ISSUES ---\n"
+                    f"{knowledge}\n\n"
+                    "Give: "
+                    "1) root cause, "
+                    "2) evidence, "
+                    "3) confidence (high/medium/low)."
+                )
+            ),
+        ]
+
+        response = llm.invoke(prompt)
+
+        return {
+            "root_cause": str(response.content)
+        }
+
+    except Exception as e:
+        return {
+            "root_cause": f"Analysis failed: {str(e)}"
+        }
+
+
+def _diff_context_exists(diff_text: str, dag_source: str) -> bool:
+    """Trial-applies the diff against the real source using the exact same
+    logic pr.py uses at apply-time. If it would fail there, it's not a
+    usable fix -- catch it here instead of burning a GitHub branch/PR on
+    something guaranteed to fall back."""
+    try:
+        apply_unified_diff(dag_source, diff_text)
+        return True
+    except (UnidiffParseError, ValueError, Exception):
+        return False
+
+
+def generate_fix(state: dict) -> dict:
+    root_cause = state.get("root_cause")
+    dag_source = state.get("dag_source", "")
+
+    if not root_cause:
+        return {
+            "proposed_fix": "NO_CONFIDENT_FIX",
+        }
+
+    try:
+        prompt = [
+            SystemMessage(
+                content=(
+                    "Propose the smallest possible safe fix, as a git diff only.\n\n"
+                    "Before proposing anything, check whether the root cause actually "
+                    "matches the code shown below. If the root cause says the DAG ID "
+                    "or task ID doesn't match the code, if the described bug is not "
+                    "present in the current source, or if you're not certain the exact "
+                    "lines you'd change still look the way the root cause assumes, do "
+                    "NOT guess a diff — respond with NO_CONFIDENT_FIX instead.\n\n"
+                    "Respond in EXACTLY this format, nothing else:\n"
+                    "DIFF:\n"
+                    "<the git diff, or the literal text NO_CONFIDENT_FIX "
+                    "if you are not confident or the described bug isn't actually there>"
+                )
+            ),
+            HumanMessage(
+                content=(
+                    f"Root cause:\n{root_cause}\n\n"
+                    f"Current code:\n{dag_source}"
+                )
+            ),
+        ]
+
+        response = llm.invoke(prompt)
+        text = str(response.content)
+
+        fix = "NO_CONFIDENT_FIX"
+        diff_match = re.search(r"DIFF:\s*(.*)", text, re.DOTALL)
+        if diff_match:
+            fix = diff_match.group(1).strip()
+
+        if fix != "NO_CONFIDENT_FIX" and not _diff_context_exists(fix, dag_source):
+            fix = "NO_CONFIDENT_FIX"
+
+        return {
+            "proposed_fix": fix,
+        }
+
+    except Exception as e:
+        return {
+            "proposed_fix": f"NO_CONFIDENT_FIX\n\nError: {str(e)}"
+        }
+
+
+DEFAULT_CONFIDENCE_WEIGHTS = {
+    "history": 0.34,
+    "logs": 0.33,
+    "source": 0.33,
+}
+
+WEIGHTS_CONFIG_PATH = os.environ.get("CONFIDENCE_WEIGHTS_PATH", "config/weights.json")
+
+
+def _load_confidence_weights() -> dict:
+    try:
+        with open(WEIGHTS_CONFIG_PATH, "r") as f:
+            data = json.load(f)
+        weights = data.get("weights", data)  # tolerate either shape
+        missing = {"history", "logs", "source"} - set(weights)
+        if missing:
+            raise ValueError(f"weights.json missing keys: {missing}")
+        loaded = {k: float(weights[k]) for k in ("history", "logs", "source")}
+        print(f"Loaded confidence weights from {WEIGHTS_CONFIG_PATH}: {loaded}")
+        return loaded
+    except FileNotFoundError:
+        print(f"WARNING: {WEIGHTS_CONFIG_PATH} not found, using default weights")
+        return DEFAULT_CONFIDENCE_WEIGHTS
+    except Exception as e:
+        print(f"WARNING: failed to load confidence weights ({e!r}), using default")
+        return DEFAULT_CONFIDENCE_WEIGHTS
+
+
+CONFIDENCE_WEIGHTS = _load_confidence_weights()
+def _fetch_history_score(dag_id: str, task_id: str) -> float:
+    global _outcomes_client_for_history
+    bucket_name = os.environ.get("OUTCOMES_BUCKET")
+    if not bucket_name or not dag_id or not task_id:
+        return 0.5
+
+    if _outcomes_client_for_history is None:
+        _outcomes_client_for_history = gcs_storage.Client()
+
+    bucket = _outcomes_client_for_history.bucket(bucket_name)
+    prefix = f"history/{dag_id}-{task_id}/"
+    blobs = list(bucket.list_blobs(prefix=prefix))
+
+    if not blobs:
+        return 0.5
+
+    merged_count = 0
+    for blob in blobs:
+        try:
+            record = json.loads(blob.download_as_text())
+            if record.get("merged"):
+                merged_count += 1
+        except Exception as e:
+            print(f"WARNING: failed to read history blob {blob.name}: {e!r}")
+            continue
+
+    return merged_count / len(blobs)
+
+
+def _log_confidence_signals(state: dict, signals: dict, score: float, tier: str) -> str:
+    """Logs every scored run (not just ones that open a PR) to BigQuery for
+    later empirical weight derivation. Returns record_id so it can be
+    carried forward into the pending PR record for outcome linking."""
+    record_id = str(uuid.uuid4())
+
+    row = {
+        "record_id": record_id,
+        "dag_id": state.get("dag_id", ""),
+        "task_id": state.get("task_id", ""),
+        "run_id": state.get("run_id", ""),
+        "s_llm": None,
+        "s_retrieval": signals.get("s_retrieval"),
+        "s_history": signals.get("s_history"),
+        "s_logs": signals.get("s_logs"),
+        "s_source": signals.get("s_source"),
+        "confidence_score": score,
+        "confidence_tier": tier,
+        "pr_number": None,      # NOTE: never backfilled after PR creation — known gap
+        "outcome": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": None,
+    }
+
+    try:
+        errors = _get_bq_client().insert_rows_json(CONFIDENCE_SIGNALS_TABLE, [row])
+        if errors:
+            print(f"ERROR: confidence_signals insert failed for {record_id}: {errors}")
+            return None
+    except Exception as e:
+        print(f"ERROR: failed to log confidence signals for {record_id}: {e!r}")
+        return None
+
+    return record_id
+
+def _mark_confidence_no_pr(record_id: str):
+    if not record_id:
+        return
+    row = {
+        "record_id": record_id,
+        "outcome": "no_pr",
+        "pr_number": None,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    table = f"{PROJECT_ID}.{BQ_DATASET}.confidence_outcomes"
+    try:
+        errors = _get_bq_client().insert_rows_json(table, [row])
+        if errors:
+            print(f"WARNING: confidence_outcomes insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to record no_pr outcome: {e!r}")
+
+def _has_history(dag_id: str, task_id: str) -> bool:
+    bucket_name = os.environ.get("OUTCOMES_BUCKET")
+    if not bucket_name or not dag_id or not task_id:
+        return False
+    global _outcomes_client_for_history
+    if _outcomes_client_for_history is None:
+        _outcomes_client_for_history = gcs_storage.Client()
+    bucket = _outcomes_client_for_history.bucket(bucket_name)
+    return any(bucket.list_blobs(prefix=f"history/{dag_id}-{task_id}/", max_results=1))
+
+
+def compute_confidence(state: dict) -> dict:
+    retrieved = state.get("retrieved_knowledge", [])
+    s_retrieval = min(1.0, len(retrieved) / 5)
+
+    task_logs = state.get("task_logs", "") or ""
+    if len(task_logs) > 50:
+        s_logs = 1.0
+    elif task_logs:
+        s_logs = 0.3
+    else:
+        s_logs = 0.0
+
+    dag_source = state.get("dag_source", "") or ""
+    s_source = 1.0 if len(dag_source) > 50 else 0.0
+
+    s_history_known = _has_history(state.get("dag_id"), state.get("task_id"))
+    s_history = _fetch_history_score(state.get("dag_id"), state.get("task_id"))
+
+    signal_values = {
+        "logs": s_logs,
+        "source": s_source,
+    }
+    if s_history_known:
+        signal_values["history"] = s_history
+    # else: skip history entirely this run instead of injecting a 0.5 guess
+
+    used_weight = sum(CONFIDENCE_WEIGHTS[k] for k in signal_values)
+    score = sum(CONFIDENCE_WEIGHTS[k] * v for k, v in signal_values.items()) / used_weight
+
+    if score >= 0.75:
+        tier = "high"
+    elif score >= 0.50:
+        tier = "medium"
+    else:
+        tier = "low"
+
+    signals = {
+        "s_retrieval": s_retrieval,
+        "s_history": s_history if s_history_known else None,
+        "s_logs": s_logs,
+        "s_source": s_source,
+    }
+
+    record_id = _log_confidence_signals(state, signals, round(score, 3), tier)
+
+    return {
+        "confidence_score": round(score, 3),
+        "confidence_tier": tier,
+        "confidence_record_id": record_id,
+    }
+
+================================================================================
+FILE: processor\agent\pr.py
+================================================================================
+
+import os
+import uuid
+import json
+from datetime import datetime, timezone
+
+from github import Auth, Github
+from google.cloud import storage as gcs_storage
+from google.cloud import bigquery
+from unidiff.errors import UnidiffParseError
+from agent.diff_utils import apply_unified_diff
+from agent.repo_config import get_github_token
+from agent.cost_utils import summarize_run_cost
+
+_outcomes_client = gcs_storage.Client()
+_OUTCOMES_BUCKET = os.environ.get("OUTCOMES_BUCKET")
+
+_bq_client = bigquery.Client()
+_PROJECT_ID = os.environ.get("GCP_PROJECT")
+_BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+_CONFIDENCE_OUTCOMES_TABLE = f"{_PROJECT_ID}.{_BQ_DATASET}.confidence_outcomes"
+
+# Task 3a: this must match the MODEL_NAME in nodes.py, since that's whose
+# usage_metadata we're pricing here. Kept as one constant instead of two so
+# a future model swap can't update one file and silently mis-price the other.
+_MODEL_NAME_FOR_COST = os.environ.get("GEMINI_MODEL_NAME", "gemini-2.5-flash")
+
+
+def _record_pending_outcome(pr_number, dag_id, task_id, run_id, root_cause, proposed_fix,
+                             confidence_record_id=None, diff_applied=None, fallback_reason=None):
+    if not _OUTCOMES_BUCKET:
+        return
+    bucket = _outcomes_client.bucket(_OUTCOMES_BUCKET)
+    blob = bucket.blob(f"pending/{pr_number}.json")
+    blob.upload_from_string(json.dumps({
+        "pr_number": pr_number, "dag_id": dag_id, "task_id": task_id,
+        "run_id": run_id, "root_cause": root_cause, "proposed_fix": proposed_fix,
+        "confidence_record_id": confidence_record_id,
+        # Carried forward so github_webhook_app.py can re-emit these on the
+        # final merged/rejected row -- otherwise they'd only ever exist on
+        # this "opened" row and get lost once the dashboard's
+        # latest-row-per-record_id query picks up the later row instead.
+        "diff_applied": diff_applied,
+        "fallback_reason": fallback_reason,
+    }))
+
+
+def _record_pr_opened_signal(confidence_record_id, pr_number, diff_applied, fallback_reason):
+    """Writes the diff_applied/fallback_reason signal to confidence_outcomes
+    the moment the PR is opened. This is a separate, earlier row from the
+    merged/rejected row the webhook writes later -- confidence_outcomes is
+    append-only (streaming insert), so this can't be an UPDATE to any
+    existing row. Dashboards should always take the latest row per
+    record_id (see query.sql), and github_webhook_app.py re-sends these
+    same values on the later row so they survive that.
+    """
+    if not confidence_record_id or not _PROJECT_ID:
+        return
+    row = {
+        "record_id": confidence_record_id,
+        "outcome": "opened",
+        "pr_number": pr_number,
+        "diff_applied": diff_applied,
+        "fallback_reason": fallback_reason,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        errors = _bq_client.insert_rows_json(_CONFIDENCE_OUTCOMES_TABLE, [row])
+        if errors:
+            print(f"WARNING: confidence_outcomes 'opened' insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to record PR-opened signal: {e!r}")
+
+
+def _build_title_prefix(confidence_tier: str, diff_applied: bool) -> str:
+    """
+    TASK 1 FIX -- title is now driven by confidence tier, always, not by
+    diff_applied.
+
+    What was happening before: the prefix was chosen almost entirely by
+    diff_applied ("[agent][fallback-no-fix]" whenever the diff didn't apply
+    cleanly, regardless of how confident the model was in the underlying
+    fix). In a 48-PR batch, 46 diffs failed to apply against the real file
+    -- for reasons unrelated to confidence -- so 46 PRs all got the same
+    "fallback-no-fix" label and the confidence tier was invisible on the
+    PR list. Only the 2 PRs whose diffs happened to apply showed a
+    meaningful title.
+
+    Fix: the tier (low / medium / high) is now always the headline label,
+    since that's the number a human reviewer actually wants to triage by.
+    Whether the diff applied is still surfaced -- both the PR body (see
+    `diff_applied` line below) and this small bracketed tag -- because
+    hiding a fallback commit under a normal-looking title is exactly the
+    dag6.py-style incident the old labeling was built to prevent. This
+    keeps that guarantee while fixing the triage problem: nothing merges
+    under a title that hides whether real code changed.
+
+    If your team decides the bracketed tag is still too noisy, the single
+    line to delete is marked below -- but don't remove the underlying
+    `diff_applied` field from the PR body, since that's the actual safety
+    signal.
+    """
+    tier = confidence_tier if confidence_tier in ("low", "medium", "high") else "unknown"
+    prefix = f"[agent][{tier}-confidence]"
+    if not diff_applied:
+        prefix += " [no-diff-applied]"  # <- delete this line only if you want to drop the honesty tag
+    return prefix
+
+
+def open_draft_pr(state: dict) -> dict:
+    print("ENTERED OPEN_PR")
+    print(f"Repo from state: {state['github_repo']}")
+    print(f"Target file from state: {state['target_file']}")
+
+    try:
+        if not state.get("github_repo"):
+            raise ValueError("github_repo missing from state")
+        if not state.get("target_file"):
+            raise ValueError("target_file missing from state")
+
+        auth = Auth.Token(get_github_token(state["github_repo"]))
+        gh = Github(auth=auth)
+        repo = gh.get_repo(state["github_repo"])
+        file_path = state["target_file"]
+
+        base_branch = repo.default_branch
+        base_sha = repo.get_branch(base_branch).commit.sha
+        branch_name = f"agent-fix/{state['dag_id']}-{uuid.uuid4().hex[:8]}"
+
+        repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=base_sha)
+
+        contents = repo.get_contents(file_path, ref=branch_name)
+        current_source = contents.decoded_content.decode("utf-8")
+
+        # Split exception handling: distinguish "diff didn't parse at all"
+        # from "diff parsed but context didn't match the file" from anything
+        # unexpected, and record WHY in diff_applied/fallback_reason instead
+        # of silently merging filler text under an honest-looking title.
+        diff_applied = True
+        fallback_reason = None
+        try:
+            patched_source = apply_unified_diff(current_source, state["proposed_fix"])
+        except UnidiffParseError as e:
+            diff_applied = False
+            fallback_reason = f"UnidiffParseError: {e}"
+        except ValueError as e:
+            diff_applied = False
+            fallback_reason = f"ValueError: {e}"
+        except Exception as e:
+            diff_applied = False
+            fallback_reason = f"{type(e).__name__}: {e}"
+
+        if not diff_applied:
+            print(f"Could not apply diff ({fallback_reason}). Falling back to test modification.")
+            patched_source = (
+                current_source + "\n\n" + "# Agent RCA Test\n"
+                + f"# DAG: {state['dag_id']}\n" + f"# Task: {state['task_id']}\n"
+            )
+
+        repo.update_file(
+            path=file_path,
+            message=f"Agent-proposed fix for {state['task_id']} failure ({state['run_id']})",
+            content=patched_source, sha=contents.sha, branch=branch_name,
+        )
+
+        title_prefix = _build_title_prefix(state.get("confidence_tier"), diff_applied)
+
+        # TASK 3b -- estimated LLM cost for this run, in USD and CAD.
+        # root_cause_usage / generate_fix_usage are populated by nodes.py's
+        # analyze_root_cause() and generate_fix() respectively (see
+        # cost_utils.extract_usage). Both keys land on this same state dict
+        # automatically since LangGraph merges each node's returned fields
+        # into the shared run state -- no graph.py change needed for this
+        # part. If either key is missing (e.g. that node errored before
+        # returning usage), it's treated as zero tokens rather than crashing
+        # PR creation over a cost estimate.
+        cost = summarize_run_cost(
+            _MODEL_NAME_FOR_COST,
+            [state.get("root_cause_usage"), state.get("generate_fix_usage")],
+        )
+
+        pr_body = (
+            f"## Automated Root Cause Analysis\n\n{state.get('root_cause', 'No RCA available')}\n\n"
+            f"## Proposed Fix\n```diff\n{state.get('proposed_fix', 'NO_FIX')}\n```\n\n"
+            f"**Confidence score:** {state.get('confidence_score')} ({state.get('confidence_tier')})\n\n"
+            f"**Diff applied:** {diff_applied}"
+            + (f" ({fallback_reason})" if fallback_reason else "")
+            + "\n\n"
+            f"**Estimated LLM cost:** ${cost['cost_usd']:.5f} USD (~${cost['cost_cad']:.5f} CAD) "
+            f"-- {cost['input_tokens']} input / {cost['output_tokens']} output tokens "
+            f"on {_MODEL_NAME_FOR_COST}. Rates and FX are estimates from config/pricing.json, "
+            f"not a billed invoice figure.\n\n"
+            f"**This Pull Request was opened automatically. A human review is required before merging.**\n\n"
+            f"Run: `{state['run_id']}`\nTask: `{state['task_id']}`"
+        )
+
+        pr = repo.create_pull(
+            title=f"{title_prefix} Fix for {state['dag_id']}.{state['task_id']} failure",
+            body=pr_body, head=branch_name, base=base_branch, draft=True,
+        )
+
+        print(f"PR created: {pr.html_url}")
+
+        _record_pending_outcome(
+            pr.number, state["dag_id"], state["task_id"], state["run_id"],
+            state.get("root_cause", ""), state.get("proposed_fix", ""),
+            state.get("confidence_record_id"),
+            diff_applied=diff_applied, fallback_reason=fallback_reason,
+        )
+
+        _record_pr_opened_signal(
+            state.get("confidence_record_id"), pr.number, diff_applied, fallback_reason,
+        )
+
+        return {"pr_url": pr.html_url, "diff_applied": diff_applied}
+
+    except Exception as e:
+        print(f"GITHUB ERROR: {e}")
+        raise
+
+================================================================================
+FILE: processor\agent\pricing.json
+================================================================================
+
+{
+  "gemini-2.5-flash": {
+    "input_per_million_usd": 0.30,
+    "output_per_million_usd": 2.50
+  },
+  "usd_to_cad_rate": 1.39,
+  "_note": "Verify the two Gemini rates at https://ai.google.dev/gemini-api/docs/pricing and refresh usd_to_cad_rate from a bank/XE quote periodically. Both numbers drift over time and this file is the only place either one lives -- nothing in code should hardcode a rate.",
+  "updated_at": "2026-09-13"
+}
+
+================================================================================
+FILE: processor\agent\repo_config.py
+================================================================================
+
+import os
+import json
+
+from google.cloud import secretmanager
+
+# Cache the parsed config and the Secret Manager client across invocations
+# (Cloud Run reuses warm instances) so we're not re-reading disk or
+# re-authenticating on every single request.
+_CONFIG_CACHE = None
+_SECRET_CLIENT = None
+_TOKEN_CACHE = {}  # repo_key -> token, cleared only on cold start
+
+
+def _get_secret_client():
+    global _SECRET_CLIENT
+    if _SECRET_CLIENT is None:
+        _SECRET_CLIENT = secretmanager.SecretManagerServiceClient()
+    return _SECRET_CLIENT
+
+
+def _load_repo_config() -> dict:
+    global _CONFIG_CACHE
+    if _CONFIG_CACHE is not None:
+        return _CONFIG_CACHE
+
+    config_path = os.environ.get("REPO_CONFIG_PATH", "config/repos.json")
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            f"repo config not found at '{config_path}'. Set REPO_CONFIG_PATH "
+            f"or add config/repos.json to the deploy bundle."
+        )
+
+    with open(config_path, "r") as f:
+        _CONFIG_CACHE = json.load(f)
+
+    return _CONFIG_CACHE
+
+
+def _access_secret(secret_name: str) -> str:
+    project_id = os.environ.get("GCP_PROJECT")
+    if not project_id:
+        raise ValueError("GCP_PROJECT env var is not set; cannot resolve secret.")
+
+    version_name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+    response = _get_secret_client().access_secret_version(name=version_name)
+    return response.payload.data.decode("utf-8")
+
+
+def get_github_token(github_repo: str) -> str:
+    """
+    Resolve the GitHub token for a given 'owner/repo' string.
+
+    Lookup order:
+      1. Exact match on github_repo in config/repos.json
+      2. The "default" entry in config/repos.json
+      3. Legacy fallback: the GITHUB_TOKEN env var, if set.
+
+    (3) exists so a half-migrated deploy doesn't hard-fail -- but once every
+    repo you actually use is listed in config/repos.json, GITHUB_TOKEN can
+    (and should) be removed from your Cloud Run env vars entirely, so a
+    misconfigured repo fails loudly instead of silently using the wrong
+    token.
+    """
+    if github_repo in _TOKEN_CACHE:
+        return _TOKEN_CACHE[github_repo]
+
+    config = _load_repo_config()
+    entry = config.get(github_repo) or config.get("default")
+
+    if entry is None:
+        legacy_token = os.environ.get("GITHUB_TOKEN")
+        if legacy_token:
+            print(
+                f"WARNING: no repo_config entry for '{github_repo}' and no "
+                f"'default' set -- using legacy GITHUB_TOKEN env var. Add "
+                f"'{github_repo}' to config/repos.json."
+            )
+            return legacy_token
+        raise ValueError(
+            f"No repo config entry for '{github_repo}', no 'default' entry, "
+            f"and no GITHUB_TOKEN fallback set. Add it to config/repos.json."
+        )
+
+    secret_name = entry.get("token_secret")
+    if not secret_name:
+        raise ValueError(
+            f"repo config entry for '{github_repo}' is missing 'token_secret'."
+        )
+
+    token = _access_secret(secret_name)
+    _TOKEN_CACHE[github_repo] = token
+    return token
+
+================================================================================
+FILE: processor\agent\state.py
+================================================================================
+
+from typing import TypedDict, Optional, List
+
+class RCAState(TypedDict, total=False):
+    dag_id: str
+    task_id: str
+    run_id: str
+    try_number: int
+    task_logs: str
+    dag_source: str
+    github_repo: str
+    target_file: str
+    synthetic_task_logs: Optional[str]
+    retrieved_knowledge: List[str]
+    root_cause: Optional[str]
+    proposed_fix: Optional[str]
+    confidence: str
+    pr_url: Optional[str]
+    diff_applied: Optional[bool]
+    confidence_score: Optional[float]
+    confidence_tier: Optional[str]
+    confidence_record_id: Optional[str]
+
+
+================================================================================
+FILE: processor\Dockerfile
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["uvicorn", "processor.processor_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+================================================================================
+FILE: processor\processor_app.py
+================================================================================
+
+import base64
+import json
+import logging
+import os
+
+from fastapi import FastAPI, Request
+
+from agent.graph import app as agent_graph
+from google.cloud import storage
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+_storage_client = storage.Client()
+_DEDUP_BUCKET = os.environ.get("DEDUP_BUCKET")
+
+def _already_processed(run_id: str, task_id: str) -> bool:
+    if not _DEDUP_BUCKET or not run_id or not task_id:
+        return False
+    bucket = _storage_client.bucket(_DEDUP_BUCKET)
+    blob = bucket.blob(f"processed/{run_id}-{task_id}")
+    if blob.exists():
+        return True
+    blob.upload_from_string("1")
+    return False
+
+_REPOS_CONFIG_PATH = os.environ.get("REPOS_CONFIG_PATH", "config/repos.json")
+_repos_config_cache = None
+
+def _load_repos_config() -> dict:
+    global _repos_config_cache
+    if _repos_config_cache is not None:
+        return _repos_config_cache
+    try:
+        with open(_REPOS_CONFIG_PATH, "r") as f:
+            _repos_config_cache = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load {_REPOS_CONFIG_PATH} ({e!r}); no per-repo dag path templates available")
+        _repos_config_cache = {}
+    return _repos_config_cache
+
+
+def _resolve_target_file(github_repo: str, dag_id: str) -> str:
+    repos_config = _load_repos_config()
+    repo_entry = repos_config.get(github_repo) or repos_config.get("default") or {}
+    template = repo_entry.get("dag_path_template", "tests/{dag_id}.py")
+    return template.format(dag_id=dag_id)
+
+app = FastAPI()
+
+
+@app.post("/process")
+async def process(request: Request):
+    try:
+        raw_data = await request.body()
+        envelope = json.loads(raw_data)
+        pubsub_message = envelope.get("message", {})
+
+        # Decode the base64 Pub/Sub payload data
+        message_bytes = base64.b64decode(pubsub_message.get("data", ""))
+        message_data = message_bytes.decode("utf-8")
+
+        payload = json.loads(message_data)
+    except Exception as e:
+        logger.error(f"Could not decode/parse Pub/Sub message data: {e}")
+        # Return 200 so Pub/Sub drops malformed messages and stops infinite retry loops
+        return {"status": "error", "message": f"Invalid payload: {e}"}
+
+    run_id = payload.get("run_id")
+    task_id = payload.get("task_id")
+
+    if _already_processed(run_id, task_id):
+        logger.info(f"Skipping duplicate: run_id={run_id} task_id={task_id}")
+        return {"status": "duplicate_skipped"}
+
+    dag_id = payload.get("dag_id")
+    github_repo = payload.get("github_repo")
+
+    target_file = payload.get("target_file") or _resolve_target_file(github_repo, dag_id)
+
+    logger.info(f"Processing: DAG={dag_id} REPO={github_repo} FILE={target_file}")
+
+    result = agent_graph.invoke(
+        {
+            "dag_id": dag_id,
+            "task_id": payload.get("task_id"),
+            "run_id": payload.get("run_id"),
+            "try_number": payload.get("try_number", 1),
+            "github_repo": github_repo,
+            "target_file": target_file,
+            "synthetic_task_logs": payload.get("synthetic_task_logs"),
+        }
+    )
+
+    logger.info(f"Graph result: {result}")
+    return {"status": "processed", "pr_url": result.get("pr_url")}
+
+
+@app.get("/status-check")
+async def status_check():
+    return {"status": "ok"}
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+================================================================================
+FILE: processor\Procfile
+================================================================================
+
+web: uvicorn processor_app:app --host 0.0.0.0 --port $PORT
+
+
+================================================================================
+FILE: processor\requirements.txt
+================================================================================
+
+langgraph
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-google-vertexai
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager
+PyGithub
+google-cloud-bigquery
+fastapi
+uvicorn
+unidiff
+langchain-community
+
+
+================================================================================
+FILE: processor\tools\__init__.py
+================================================================================
+
+
+
+================================================================================
+FILE: processor\tools\context.py
+================================================================================
+
+import os
+import time
+from datetime import datetime, timedelta, timezone
+from google.cloud import logging as cloud_logging
+from google.api_core.exceptions import ResourceExhausted
+
+
+def _parse_failure_time_from_run_id(run_id: str) -> datetime:
+    """Airflow run_ids look like 'manual__2026-08-19T00:22:48.048167+00:00'
+    or 'scheduled__2026-08-19T00:00:00+00:00'. Fall back to now() if the
+    format doesn't match (e.g. a synthetic test run_id)."""
+    _, _, ts = run_id.partition("__")
+    if not ts:
+        return datetime.now(timezone.utc)
+    try:
+        return datetime.fromisoformat(ts)
+    except ValueError:
+        return datetime.now(timezone.utc)
+
+
+def fetch_task_logs(filter_str: str) -> str:
+    """Fetches task logs from Google Cloud Logging with exponential backoff for rate limits."""
+    client = cloud_logging.Client()
+    max_retries = 5
+    base_delay = 2
+
+    for attempt in range(max_retries):
+        try:
+            entries = list(
+                client.list_entries(
+                    filter_=filter_str,
+                    order_by=cloud_logging.DESCENDING,
+                    max_results=200,
+                )
+            )
+            if entries:
+                lines = [str(e.payload) for e in entries]
+                return "\n".join(reversed(lines))
+            return ""
+        except ResourceExhausted as e:
+            if attempt == max_retries - 1:
+                raise e
+            sleep_time = base_delay * (2 ** attempt)
+            time.sleep(sleep_time)
+        except Exception:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(base_delay * (2 ** attempt))
+
+    return ""
+
+
+def fetch_dag_source(dag_id: str, github_repo: str, target_file: str) -> str:
+    from github import Auth, Github
+    from agent.repo_config import get_github_token
+
+    auth = Auth.Token(get_github_token(github_repo))
+    gh = Github(auth=auth)
+    repo = gh.get_repo(github_repo)
+    contents = repo.get_contents(target_file)
+    return contents.decoded_content.decode("utf-8")
+
+================================================================================
+FILE: processor-env.yaml
+================================================================================
+
+GCP_PROJECT: dag-failure-agent-505623
+GCP_LOCATION: us-central1
+DEDUP_BUCKET: dag-failure-agent-505623-dedup
+OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+BQ_DATASET: dag_failure_agent
+
+================================================================================
+FILE: publish_batch_diverse.py
+================================================================================
+
+#!/usr/bin/env python3
+"""
+publish_batch_diverse.py
+
+Reads config/scenarios.json and publishes one Pub/Sub message per scenario
+to trigger the dag-failure-agent Cloud Run worker.
+
+Fixes vs. the old script:
+  - Every published message gets a unique run_id (scenario_id + UTC
+    timestamp + short uuid), so the worker can never collide on a branch
+    name or dedupe key across runs.
+  - A configurable delay is inserted between publishes (default 5s) so the
+    Cloud Run service has time to scale/process before the next event
+    lands, avoiding the collision spikes seen when firing 4 repeats every
+    2 seconds.
+  - Clear, structured logging of exactly what was published, so a batch
+    run can be audited scenario-by-scenario.
+  - Writes a local results/run_manifest.json recording every run_id that
+    was published, for the dashboard to join against agent outcomes.
+
+Usage:
+    python publish_batch_diverse.py \\
+        --project my-gcp-project \\
+        --topic dag-failure-events \\
+        --scenarios config/scenarios.json \\
+        --delay-seconds 5
+"""
+import argparse
+import json
+import logging
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+log = logging.getLogger("publish_batch_diverse")
+
+
+def load_scenarios(path: str) -> dict:
+    with open(path, "r") as f:
+        config = json.load(f)
+    if "scenarios" not in config or not config["scenarios"]:
+        raise ValueError(f"No scenarios found in {path}")
+    return config
+
+
+def make_run_id(scenario_id: str) -> str:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    short_uuid = uuid.uuid4().hex[:8]
+    return f"run-{scenario_id}-{timestamp}-{short_uuid}"
+
+
+def load_log_contents(log_file: str, weight_tests_dir: str) -> str:
+    log_path = Path(weight_tests_dir) / log_file
+    with open(log_path, "r") as f:
+        return f.read()
+
+
+def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_dir: str) -> dict:
+    return {
+        "run_id": run_id,
+        "github_repo": github_repo,
+        "dag_id": scenario["dag_id"],
+        "task_id": scenario["task_id"],
+        # processor_app.py resolves the DAG source path itself via
+        # _resolve_target_file() when target_file is absent, but we pass
+        # it explicitly since we already know it from scenarios.json.
+        "target_file": scenario["code_file"],
+        # processor_app.py reads this exact key and passes it straight
+        # into the LangGraph state as "synthetic_task_logs" — collect_context
+        # only skips the real fetch_task_logs() call when this is non-None.
+        "synthetic_task_logs": load_log_contents(scenario["log_file"], weight_tests_dir),
+        "log_file": scenario["log_file"],
+        "scenario_id": scenario["scenario_id"],
+        "difficulty": scenario.get("difficulty"),
+        "expected_outcome": scenario.get("expected_outcome"),
+        "branch_name": f"agent/fix-{scenario['dag_id']}-{run_id}",
+    }
+
+
+def publish_message(publisher, topic_path, payload: dict) -> str:
+    """Publish a single JSON payload to Pub/Sub and return the message id."""
+    data = json.dumps(payload).encode("utf-8")
+    future = publisher.publish(topic_path, data=data, run_id=payload["run_id"])
+    return future.result()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Publish diverse benchmark scenarios to Pub/Sub")
+    parser.add_argument("--project", required=True, help="GCP project id")
+    parser.add_argument("--topic", required=True, help="Pub/Sub topic name")
+    parser.add_argument(
+        "--scenarios",
+        default="config/scenarios.json",
+        help="Path to scenarios.json",
+    )
+    parser.add_argument(
+        "--weight-tests-dir",
+        default="weight_tests",
+        help="Directory containing the log_*.txt files referenced by scenarios.json",
+    )
+    parser.add_argument(
+        "--delay-seconds",
+        type=float,
+        default=5.0,
+        help="Delay between publishing each scenario (default: 5s)",
+    )
+    parser.add_argument(
+        "--manifest-out",
+        default="results/run_manifest.json",
+        help="Where to write the manifest of published run_ids (for the dashboard)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Build payloads and write the manifest without calling Pub/Sub",
+    )
+    args = parser.parse_args()
+
+    config = load_scenarios(args.scenarios)
+    github_repo = config.get("github_repo", "")
+    scenarios = config["scenarios"]
+    repeats = config.get("repeats_per_scenario", 1)
+
+    publisher = None
+    topic_path = None
+    if not args.dry_run:
+        from google.cloud import pubsub_v1  # imported lazily so --dry-run needs no GCP libs
+
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(args.project, args.topic)
+
+    manifest = []
+    total = len(scenarios) * repeats
+    log.info(f"Publishing {total} run(s) across {len(scenarios)} scenario(s), "
+              f"{args.delay_seconds}s delay between runs, dry_run={args.dry_run}")
+
+    count = 0
+    for scenario in scenarios:
+        for repeat_index in range(repeats):
+            run_id = make_run_id(scenario["scenario_id"])
+            payload = build_payload(scenario, run_id, github_repo, args.weight_tests_dir)
+            count += 1
+
+            log.info(
+                f"[{count}/{total}] scenario={scenario['scenario_id']} "
+                f"difficulty={scenario.get('difficulty')} "
+                f"dag_id={scenario['dag_id']} log_file={scenario['log_file']} "
+                f"run_id={run_id} expected={scenario.get('expected_outcome')}"
+            )
+
+            if args.dry_run:
+                message_id = "dry-run"
+            else:
+                message_id = publish_message(publisher, topic_path, payload)
+                log.info(f"  -> published Pub/Sub message_id={message_id}")
+
+            manifest.append({**payload, "message_id": message_id})
+
+            if count < total:
+                time.sleep(args.delay_seconds)
+
+    manifest_path = Path(args.manifest_out)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    log.info(f"Wrote manifest of {len(manifest)} run(s) to {manifest_path}")
+
+
+if __name__ == "__main__":
+    main()
+
+================================================================================
+FILE: publish_test_message.py
+================================================================================
+
+import argparse
+import json
+from google.cloud import pubsub_v1
+
+PROJECT_ID = "dag-failure-agent-505623"
+TOPIC_ID = "dagfailures-processing"
+
+def publish_message(args):
+    log_content = None
+    if args.log_file:
+        with open(args.log_file, "r", encoding="utf-8") as f:
+            log_content = f.read()
+
+    payload = {
+        "dag_id": args.dag_id,
+        "task_id": args.task_id,
+        "run_id": args.run_id,
+        "target_file": args.target_file,
+        "synthetic_task_logs": log_content or "sample log for verification",
+        "github_repo": args.github_repo,
+    }
+
+    # Clean out empty/None values
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    publisher_client = pubsub_v1.PublisherClient()
+    topic_path = publisher_client.topic_path(PROJECT_ID, TOPIC_ID)
+
+    # Encode strictly as valid JSON bytes
+    data = json.dumps(payload).encode("utf-8")
+    future = publisher_client.publish(topic_path, data)
+    
+    # Enforce timeout to prevent silent gRPC hangs
+    print(f"Published message ID: {future.result(timeout=30)}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Publish dynamic test message to Pub/Sub.")
+    parser.add_argument("dag_id", help="DAG identifier")
+    parser.add_argument("task_id", help="Task identifier")
+    parser.add_argument("target_file", help="Path to target python DAG file")
+    parser.add_argument("log_file", nargs="?", default=None, help="Path to log file (optional)")
+    parser.add_argument("--run-id", default="manual-cli-test", help="Airflow run ID")
+    parser.add_argument("--github-repo", default="AdityaShett/dag-failure-agent", help="GitHub repo (owner/repo)")
+
+    args = parser.parse_args()
+    publish_message(args)
+
+================================================================================
+FILE: query.sql
+================================================================================
+
+SELECT s.confidence_tier, o.outcome, COUNT(*) AS n
+FROM `dag-failure-agent-505623.dag_failure_agent.confidence_signals` s
+JOIN (
+  SELECT record_id, outcome,
+         ROW_NUMBER() OVER (PARTITION BY record_id ORDER BY updated_at DESC) AS rn
+  FROM `dag-failure-agent-505623.dag_failure_agent.confidence_outcomes`
+) o ON o.record_id = s.record_id AND o.rn = 1
+GROUP BY s.confidence_tier, o.outcome
+ORDER BY s.confidence_tier
+
+
+================================================================================
+FILE: README.md
+================================================================================
+
+# dag-failure-agent
+AI assited agent, that flags task failure in Airflow, and creates a pull request and code diff for human review.
+
+
+================================================================================
+FILE: receiver\Dockerfile
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["uvicorn", "receiver_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+================================================================================
+FILE: receiver\Procfile
+================================================================================
+
+web: uvicorn receiver_app:app --host 0.0.0.0 --port $PORT
+
+
+================================================================================
+FILE: receiver\receiver_app.py
+================================================================================
+
+import base64
+import json
+import os
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, Request
+from google.cloud import pubsub_v1
+
+app = FastAPI()
+
+publisher = pubsub_v1.PublisherClient()
+processing_topic_path = publisher.topic_path(
+    os.environ["GCP_PROJECT"], "dagfailures-processing"
+)
+
+ALLOWED_DAG_IDS = os.environ.get("ALLOWED_DAG_IDS", "").split(",") if os.environ.get("ALLOWED_DAG_IDS") else None
+
+
+@app.post("/pubsub-push")
+async def receive(request: Request):
+    envelope = await request.json()
+    pubsub_message = envelope["message"]
+
+    raw_data = base64.b64decode(pubsub_message["data"]).decode("utf-8")
+    payload = json.loads(raw_data)
+
+    publish_time = datetime.fromisoformat(
+        pubsub_message["publishTime"].replace("Z", "+00:00")
+    )
+    age_minutes = (datetime.now(timezone.utc) - publish_time).total_seconds() / 60
+
+    if age_minutes > 10:
+        print(f"Skipping stale message. Age={age_minutes:.1f} minutes")
+        return {"status": "stale"}
+
+    dag_id = payload.get("dag_id")
+    if ALLOWED_DAG_IDS and dag_id not in ALLOWED_DAG_IDS:
+        print(f"Skipping dag_id={dag_id}, not in ALLOWED_DAG_IDS")
+        return {"status": "ignored_dag"}
+
+    future = publisher.publish(
+        processing_topic_path, json.dumps(payload).encode("utf-8")
+    )
+    print(f"Relayed to processing topic: {future.result()}")
+
+    return {"status": "relayed"}
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+================================================================================
+FILE: receiver\requirements.txt
+================================================================================
+
+langgraph
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-google-vertexai
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager
+PyGithub
+google-cloud-bigquery
+fastapi
+uvicorn
+unidiff
+langchain-community
+
+
+================================================================================
+FILE: receiver-env.yaml
+================================================================================
+
+GCP_PROJECT: dag-failure-agent-505623
+ALLOWED_DAG_IDS: dag1,dag2,dag3,dag4,dag5,dag6
+
+================================================================================
+FILE: requirements.txt
+================================================================================
+
+langgraph
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-google-vertexai
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager
+PyGithub
+google-cloud-bigquery
+fastapi
+uvicorn
+unidiff
+langchain-community
+
+
+================================================================================
+FILE: results\results.json
+================================================================================
+
+[
+  {
+    "run_id": "run-schema_drift_dag1-20260910T031230Z-a1b2c3d4",
+    "scenario_id": "schema_drift_dag1",
+    "dag_id": "dag1",
+    "difficulty": "easy",
+    "failure_type": "KeyError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.93,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/101",
+    "timestamp": "2026-09-10T03:12:45Z"
+  },
+  {
+    "run_id": "run-macro_mismatch_dag2-20260910T031400Z-b2c3d4e5",
+    "scenario_id": "macro_mismatch_dag2",
+    "dag_id": "dag2",
+    "difficulty": "easy",
+    "failure_type": "FileNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.88,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/102",
+    "timestamp": "2026-09-10T03:14:10Z"
+  },
+  {
+    "run_id": "run-null_handling_dag3-20260910T031615Z-c3d4e5f6",
+    "scenario_id": "null_handling_dag3",
+    "dag_id": "dag3",
+    "difficulty": "medium",
+    "failure_type": "AttributeError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.79,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/103",
+    "timestamp": "2026-09-10T03:16:22Z"
+  },
+  {
+    "run_id": "run-missing_import_dag4-20260910T031802Z-d4e5f6a7",
+    "scenario_id": "missing_import_dag4",
+    "dag_id": "dag4",
+    "difficulty": "medium",
+    "failure_type": "ModuleNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 0.81,
+    "pr_url": "https://github.com/AdityaShett/dag-failure-agent/pull/104",
+    "timestamp": "2026-09-10T03:18:09Z"
+  },
+  {
+    "run_id": "run-partner_outage_dag5-20260910T032040Z-e5f6a7b8",
+    "scenario_id": "partner_outage_dag5",
+    "dag_id": "dag5",
+    "difficulty": "hard",
+    "failure_type": "HTTPError_500_external",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.22,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:21:20Z"
+  },
+  {
+    "run_id": "run-ambiguous_log_dag6-20260910T032355Z-f6a7b8c9",
+    "scenario_id": "ambiguous_log_dag6",
+    "dag_id": "dag6",
+    "difficulty": "hard",
+    "failure_type": "no_stack_trace",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.11,
+    "pr_url": null,
+    "timestamp": "2026-09-10T03:24:15Z"
+  }
+]
+
+
+================================================================================
+FILE: results\run_manifest.json
+================================================================================
+
+[
+  {
+    "run_id": "run-schema_drift_dag1-20260916T035747Z-e0d53dba",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag1",
+    "task_id": "transform_data",
+    "target_file": "tests/dag1.py",
+    "synthetic_task_logs": "[2026-09-10 03:12:41,558] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:12:41,559] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): transform_data> on 2026-09-10 03:12:41+00:00\n[2026-09-10 03:12:41,812] {python.py:194} ERROR - Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/airflow/dags/tests/dag1.py\", line 30, in transform_data\n    user_ids = df[\"user_id\"].tolist()\n  File \"/usr/local/lib/python3.11/site-packages/pandas/core/frame.py\", line 3893, in __getitem__\n    indexer = self.columns.get_loc(key)\n  File \"/usr/local/lib/python3.11/site-packages/pandas/core/indexes/base.py\", line 3798, in get_loc\n    raise KeyError(key) from err\nKeyError: 'user_id'\n[2026-09-10 03:12:41,815] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag1, task_id=transform_data, execution_date=20260910T031241, start_date=20260910T031241, end_date=20260910T031241\n",
+    "log_file": "log_easy_schema.txt",
+    "scenario_id": "schema_drift_dag1",
+    "difficulty": "easy",
+    "expected_outcome": "PR_CREATED",
+    "branch_name": "agent/fix-dag1-run-schema_drift_dag1-20260916T035747Z-e0d53dba",
+    "message_id": "21868650182514803"
+  },
+  {
+    "run_id": "run-macro_mismatch_dag2-20260916T035753Z-5f63fa57",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag2",
+    "task_id": "read_partition",
+    "target_file": "tests/dag2.py",
+    "synthetic_task_logs": "[2026-09-10 03:14:02,201] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:14:02,203] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): read_partition> on 2026-01-15 00:00:00+00:00\n[2026-09-10 03:14:02,455] {python.py:194} ERROR - Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/airflow/dags/tests/dag2.py\", line 19, in read_partition\n    raise FileNotFoundError(\nFileNotFoundError: No such file or directory: '/data/warehouse/events/dt=2024-01-15/part-00000.csv'\n[2026-09-10 03:14:02,460] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag2, task_id=read_partition, execution_date=20260115T000000, start_date=20260910T031402, end_date=20260910T031402\n",
+    "log_file": "log_easy_partition.txt",
+    "scenario_id": "macro_mismatch_dag2",
+    "difficulty": "easy",
+    "expected_outcome": "PR_CREATED",
+    "branch_name": "agent/fix-dag2-run-macro_mismatch_dag2-20260916T035753Z-5f63fa57",
+    "message_id": "21868385985907446"
+  },
+  {
+    "run_id": "run-null_handling_dag3-20260916T035758Z-756d796f",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag3",
+    "task_id": "clean_records",
+    "target_file": "tests/dag3.py",
+    "synthetic_task_logs": "[2026-09-10 03:16:18,904] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:16:18,905] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): clean_records> on 2026-09-10 03:16:18+00:00\n[2026-09-10 03:16:18,977] {python.py:194} ERROR - Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/airflow/dags/tests/dag3.py\", line 21, in clean_records\n    normalized_email = record[\"email\"].lower()\nAttributeError: 'NoneType' object has no attribute 'lower'\n[2026-09-10 03:16:18,980] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag3, task_id=clean_records, execution_date=20260910T031618, start_date=20260910T031618, end_date=20260910T031618\n",
+    "log_file": "log_medium_null.txt",
+    "scenario_id": "null_handling_dag3",
+    "difficulty": "medium",
+    "expected_outcome": "PR_CREATED",
+    "branch_name": "agent/fix-dag3-run-null_handling_dag3-20260916T035758Z-756d796f",
+    "message_id": "21867888772872697"
+  },
+  {
+    "run_id": "run-missing_import_dag4-20260916T035803Z-cfe95ddc",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag4",
+    "task_id": "score_engagement",
+    "target_file": "tests/dag4.py",
+    "synthetic_task_logs": "[2026-09-10 03:18:05,331] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:18:05,332] {dagbag.py:588} ERROR - Failed to import: /opt/airflow/dags/tests/dag4.py\nTraceback (most recent call last):\n  File \"/opt/airflow/dags/tests/dag4.py\", line 11, in <module>\n    from utils.metrics_helper import compute_engagement_score\nModuleNotFoundError: No module named 'utils.metrics_helper'\n[2026-09-10 03:18:05,335] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag4, task_id=score_engagement, execution_date=20260910T031805, start_date=20260910T031805, end_date=20260910T031805\n",
+    "log_file": "log_medium_import.txt",
+    "scenario_id": "missing_import_dag4",
+    "difficulty": "medium",
+    "expected_outcome": "PR_CREATED",
+    "branch_name": "agent/fix-dag4-run-missing_import_dag4-20260916T035803Z-cfe95ddc",
+    "message_id": "21867793008942181"
+  },
+  {
+    "run_id": "run-partner_outage_dag5-20260916T035808Z-0ea4d8a5",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag5",
+    "task_id": "call_partner_api",
+    "target_file": "tests/dag5.py",
+    "synthetic_task_logs": "[2026-09-10 03:20:44,110] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:20:44,112] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): call_partner_api> on 2026-09-10 03:20:44+00:00\n[2026-09-10 03:21:14,890] {python.py:194} ERROR - Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/airflow/dags/tests/dag5.py\", line 18, in call_partner_api\n    response.raise_for_status()\n  File \"/usr/local/lib/python3.11/site-packages/requests/models.py\", line 1024, in raise_for_status\n    raise HTTPError(http_error_msg, response=self)\nrequests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://partner-api.example.com/v2/report\n[2026-09-10 03:21:14,895] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag5, task_id=call_partner_api, execution_date=20260910T032044, start_date=20260910T032044, end_date=20260910T032114\n",
+    "log_file": "log_hard_partner.txt",
+    "scenario_id": "partner_outage_dag5",
+    "difficulty": "hard",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "branch_name": "agent/fix-dag5-run-partner_outage_dag5-20260916T035808Z-0ea4d8a5",
+    "message_id": "21868879238744996"
+  },
+  {
+    "run_id": "run-ambiguous_log_dag6-20260916T035813Z-ca50343f",
+    "github_repo": "AdityaShett/dag-failure-agent",
+    "dag_id": "dag6",
+    "task_id": "run_batch_job",
+    "target_file": "tests/dag6.py",
+    "synthetic_task_logs": "[2026-09-10 03:23:59,004] {taskinstance.py:1937} INFO - Starting attempt 1 of 1\n[2026-09-10 03:23:59,006] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): run_batch_job> on 2026-09-10 03:23:59+00:00\n[2026-09-10 03:24:11,442] {local_task_job_runner.py:266} INFO - Task exited with return code 1\n[2026-09-10 03:24:11,450] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag6, task_id=run_batch_job, execution_date=20260910T032359, start_date=20260910T032359, end_date=20260910T032411\n",
+    "log_file": "log_hard_ambiguous.txt",
+    "scenario_id": "ambiguous_log_dag6",
+    "difficulty": "hard",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "branch_name": "agent/fix-dag6-run-ambiguous_log_dag6-20260916T035813Z-ca50343f",
+    "message_id": "21868650182581023"
+  }
+]
+
+================================================================================
+FILE: review_and_label_prs.py
+================================================================================
+
+# review_and_label_prs.py
+import json, re, subprocess, sys
+from pathlib import Path
+
+REPO = "AdityaShett/dag-failure-agent"
+LOG_PATH = Path("label_decisions.json")
+
+def gh_json(args):
+    result = subprocess.run(["gh"] + args, capture_output=True, text=True, check=True)
+    return json.loads(result.stdout)
+
+def extract_sections(body: str):
+    rc_match = re.search(r"## Automated Root Cause Analysis\n\n(.*?)\n\n## Proposed Fix", body, re.DOTALL)
+    diff_match = re.search(r"```diff\n(.*?)\n```", body, re.DOTALL)
+    root_cause = rc_match.group(1).strip() if rc_match else "(not found)"
+    diff = diff_match.group(1).strip() if diff_match else "(not found)"
+    return root_cause, diff
+
+def is_fallback(diff: str) -> bool:
+    return "# Agent RCA Test" in diff
+
+def load_decisions():
+    return json.loads(LOG_PATH.read_text()) if LOG_PATH.exists() else {}
+
+def save_decision(decisions, pr_number, verdict, title):
+    decisions[str(pr_number)] = {"title": title, "verdict": verdict}
+    LOG_PATH.write_text(json.dumps(decisions, indent=2))
+
+def main():
+    prs = gh_json(["pr", "list", "--repo", REPO, "--state", "open",
+                   "--json", "number,title,body", "--limit", "100"])
+    prs = [pr for pr in prs if re.search(r"for dag[1-6]\.", pr["title"])]
+    decisions = load_decisions()
+
+    print(f"{len(prs)} open PRs. {len(decisions)} already labeled this run.\n")
+
+    for pr in prs:
+        num, title, body = pr["number"], pr["title"], pr["body"]
+        if str(num) in decisions:
+            continue
+
+        root_cause, diff = extract_sections(body)
+        fallback = is_fallback(diff)
+
+        print("=" * 70)
+        print(f"#{num}: {title}")
+        if fallback:
+            print("[NOTE] This is a fallback filler diff, not a real fix — recommend closing.")
+        print("\n--- Root cause ---")
+        print(root_cause[:400])
+        print("\n--- Diff ---")
+        print(diff[:600])
+        print()
+
+        while True:
+            choice = input("[m]erge / [c]lose / [s]kip / [q]uit: ").strip().lower()
+            if choice in ("m", "c", "s", "q"):
+                break
+
+        if choice == "q":
+            print("Stopping. Decisions saved so far are in label_decisions.json.")
+            break
+        if choice == "s":
+            continue
+
+        if choice == "m":
+            subprocess.run(["gh", "pr", "ready", str(num), "--repo", REPO])
+            subprocess.run(["gh", "pr", "merge", str(num), "--repo", REPO, "--squash", "--admin"])
+            save_decision(decisions, num, "merged", title)
+        elif choice == "c":
+            subprocess.run(["gh", "pr", "close", str(num), "--repo", REPO])
+            save_decision(decisions, num, "closed", title)
+
+    print(f"\nDone. {len(decisions)} PRs labeled so far, saved to {LOG_PATH}.")
+
+if __name__ == "__main__":
+    main()
+
+================================================================================
+FILE: score_manual_weights.py
+================================================================================
+
+"""
+score_manual_weights.py
+
+Replaces tune_weights.py / tune_weights_3signal.py / tune_weights_v2.py.
+No grid search -- just a fixed, manually-chosen weighting for the three
+remaining signals (history, logs, source), scored for accuracy, precision,
+and F1 against your labeled data.
+
+This is intentionally "manageable, not optimal" per the new plan: a human
+picks numbers that make sense, then this script tells you how that specific
+choice performs, rather than searching thousands of combinations.
+
+CAVEAT: with very few merged examples, precision/F1 are unstable -- a single
+example flipping above/below threshold can swing them from 0.0 to 1.0. Don't
+treat these numbers as settled until you have a meaningful count on both
+sides (framework here uses the same >=5/class floor as before to warn you,
+but will still compute and show the numbers below that if you want to look).
+
+Usage:
+    python score_manual_weights.py
+    python score_manual_weights.py --history 0.5 --logs 0.3 --source 0.2 --threshold 0.6
+"""
+import argparse
+import os
+
+from google.cloud import bigquery
+
+PROJECT = os.environ["GCP_PROJECT"]
+DATASET = "dag_failure_agent"
+MIN_PER_CLASS_WARNING = 5
+
+
+def fetch_rows():
+    client = bigquery.Client(project=PROJECT)
+    sql = f"""
+        WITH latest_outcome AS (
+          SELECT record_id, outcome,
+                 ROW_NUMBER() OVER (PARTITION BY record_id ORDER BY updated_at DESC) AS rn
+          FROM `{PROJECT}.{DATASET}.confidence_outcomes`
+        )
+        SELECT s.s_history, s.s_logs, s.s_source,
+               IF(COALESCE(o.outcome, s.outcome) = 'merged', 1, 0) AS merged
+        FROM `{PROJECT}.{DATASET}.confidence_signals` s
+        LEFT JOIN latest_outcome o ON o.record_id = s.record_id AND o.rn = 1
+        WHERE COALESCE(o.outcome, s.outcome) IN ('merged', 'rejected')
+    """
+    return [dict(r) for r in client.query(sql).result()]
+
+
+def score(row, weights):
+    return (
+        weights["history"] * row["s_history"]
+        + weights["logs"] * row["s_logs"]
+        + weights["source"] * row["s_source"]
+    )
+
+
+def confusion(rows, weights, threshold):
+    tp = fp = tn = fn = 0
+    for r in rows:
+        pred = score(r, weights) >= threshold
+        actual = bool(r["merged"])
+        if pred and actual:
+            tp += 1
+        elif pred and not actual:
+            fp += 1
+        elif not pred and actual:
+            fn += 1
+        else:
+            tn += 1
+    return tp, fp, tn, fn
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--history", type=float, default=0.40)
+    parser.add_argument("--logs", type=float, default=0.30)
+    parser.add_argument("--source", type=float, default=0.30)
+    parser.add_argument("--threshold", type=float, default=0.50)
+    args = parser.parse_args()
+
+    weights = {"history": args.history, "logs": args.logs, "source": args.source}
+    total_weight = sum(weights.values())
+    if abs(total_weight - 1.0) > 0.01:
+        print(f"NOTE: weights sum to {total_weight:.2f}, not 1.0 -- scores won't be on a clean 0-1 scale.")
+
+    rows = fetch_rows()
+    n_merged = sum(r["merged"] for r in rows)
+    n_rejected = len(rows) - n_merged
+
+    print(f"Data: {len(rows)} labeled rows ({n_merged} merged, {n_rejected} rejected)")
+    if n_merged < MIN_PER_CLASS_WARNING or n_rejected < MIN_PER_CLASS_WARNING:
+        print(
+            f"WARNING: fewer than {MIN_PER_CLASS_WARNING} examples in one class. "
+            f"The metrics below are being computed anyway, but treat them as "
+            f"provisional, not a settled result."
+        )
+
+    print(f"\nWeights: {weights}")
+    print(f"Threshold: {args.threshold}\n")
+
+    tp, fp, tn, fn = confusion(rows, weights, args.threshold)
+
+    accuracy = (tp + tn) / len(rows) if rows else 0.0
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    trivial_baseline = n_rejected / len(rows) if rows else 0.0
+
+    print("--- Confusion matrix ---")
+    print(f"TP={tp}  FP={fp}  TN={tn}  FN={fn}")
+
+    print("\n--- Scores ---")
+    print(f"accuracy:                   {accuracy:.3f}")
+    print(f"precision:                  {precision:.3f}")
+    print(f"recall:                     {recall:.3f}")
+    print(f"f1:                         {f1:.3f}")
+    print(f"trivial always-reject acc.: {trivial_baseline:.3f}")
+
+    if accuracy < trivial_baseline:
+        print(
+            "\nNOTE: accuracy is below the trivial always-reject baseline. "
+            "Expected at very low merged-counts -- any attempt to catch the "
+            "rare positive case costs some accuracy. Watch precision/recall "
+            "instead of accuracy alone while merged examples are this scarce."
+        )
+
+
+if __name__ == "__main__":
+    main()
+
+
+================================================================================
+FILE: setup.py
+================================================================================
+
+import json
+
+repo = input("Enter GitHub repository: ").strip()
+
+config = {
+    "github_repo": repo
+}
+
+with open("config.json", "w") as f:
+    json.dump(config, f, indent=4)
+
+print("\nConfiguration saved.")
+print(json.dumps(config, indent=4))
+
+================================================================================
+FILE: tests\dag1.py
+================================================================================
+
+"""
+DAG 1: Schema / Column Drift
+Failure mode: KeyError caused by an upstream schema change (a column was
+renamed before this task's transform logic runs).
+Expected agent outcome: PR_CREATED (easy / high-confidence fix).
+"""
+from datetime import datetime
+
+import pandas as pd
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+
+def load_dataset(**context):
+    # Upstream extract step. In production this reads from a warehouse
+    # table; here it simulates the schema drift: the source system
+    # renamed "user_id" -> "uid" but this DAG was not updated.
+    data = {
+        "uid": [101, 102, 103],
+        "event_type": ["click", "view", "purchase"],
+        "amount": [0.0, 0.0, 49.99],
+    }
+    df = pd.DataFrame(data)
+    context["ti"].xcom_push(key="raw_df", value=df.to_dict())
+
+
+def transform_data(**context):
+    raw = context["ti"].xcom_pull(key="raw_df", task_ids="load_dataset")
+    df = pd.DataFrame(raw)
+    user_ids = df["user_id"].tolist()
+    print(f"Processed {len(user_ids)} user records")
+
+
+with DAG(
+    dag_id="dag1",
+    description="Schema / Column Drift",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "schema-drift"],
+) as dag:
+    load = PythonOperator(task_id="load_dataset", python_callable=load_dataset)
+    transform = PythonOperator(task_id="transform_data", python_callable=transform_data)
+    load >> transform
+
+
+================================================================================
+FILE: tests\dag2.py
+================================================================================
+
+"""
+DAG 2: Partition / Macro Syntax
+Failure mode: FileNotFoundError caused by using the wrong Airflow date
+macro when building a partition path ("{{ ds }}" vs "{{ ds_nodash }}").
+Expected agent outcome: PR_CREATED (easy / high-confidence fix).
+"""
+import os
+from datetime import datetime
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+
+def read_partition(ds, **context):
+    # Upstream job writes partitions named with the *nodash* date format,
+    # e.g. /data/warehouse/events/dt=20240115/part-00000.csv
+    partition_path = f"/data/warehouse/events/dt={ds}/part-00000.csv"
+    if not os.path.exists(partition_path):
+        raise FileNotFoundError(
+            f"No such file or directory: '{partition_path}'"
+        )
+    with open(partition_path, "r") as f:
+        return f.read()
+
+
+with DAG(
+    dag_id="dag2",
+    description="Partition / Macro Syntax",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "macro-mismatch"],
+) as dag:
+    read_task = PythonOperator(
+        task_id="read_partition",
+        python_callable=read_partition,
+        op_kwargs={"ds": "{{ ds }}"},
+    )
+
+
+================================================================================
+FILE: tests\dag3.py
+================================================================================
+
+"""
+DAG 3: Data Quality / Null Handling
+Failure mode: AttributeError from calling a string method on a None value
+that was not filtered out upstream.
+Expected agent outcome: PR_CREATED (medium confidence fix).
+"""
+from datetime import datetime
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+
+def clean_records(**context):
+    records = [
+        {"name": "Alice", "email": "alice@example.com"},
+        {"name": "Bob", "email": None},
+        {"name": "Cara", "email": "cara@example.com"},
+    ]
+    normalized = []
+    for record in records:
+        normalized_email = record["email"].lower()
+        normalized.append(normalized_email)
+    print(f"Normalized {len(normalized)} emails")
+
+
+with DAG(
+    dag_id="dag3",
+    description="Data Quality / Null Handling",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "null-handling"],
+) as dag:
+    clean = PythonOperator(task_id="clean_records", python_callable=clean_records)
+
+
+================================================================================
+FILE: tests\dag4.py
+================================================================================
+
+"""
+DAG 4: Import / Dependency Missing
+Failure mode: ModuleNotFoundError caused by importing from a module path
+that was moved during a repo refactor (utils.metrics_helper -> lib.metrics).
+Expected agent outcome: PR_CREATED (medium confidence fix).
+"""
+from datetime import datetime
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from utils.metrics_helper import compute_engagement_score
+
+
+def score_engagement(**context):
+    score = compute_engagement_score(clicks=42, views=310)
+    print(f"Engagement score: {score}")
+
+
+with DAG(
+    dag_id="dag4",
+    description="Import / Dependency Missing",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "missing-import"],
+) as dag:
+    score_task = PythonOperator(
+        task_id="score_engagement", python_callable=score_engagement
+    )
+
+
+================================================================================
+FILE: tests\dag5.py
+================================================================================
+
+"""
+DAG 5: API / Network Timeout (External)
+Failure mode: the third-party partner API returns HTTP 500 / times out.
+This is NOT something a code change in this repo can fix.
+Expected agent outcome: NO_CONFIDENT_FIX (negative test).
+"""
+from datetime import datetime
+
+import requests
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+
+def call_partner_api(**context):
+    response = requests.get(
+        "https://partner-api.example.com/v2/report", timeout=30
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+with DAG(
+    dag_id="dag5",
+    description="API / Network Timeout (External)",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "external-outage", "negative"],
+) as dag:
+    call_task = PythonOperator(
+        task_id="call_partner_api", python_callable=call_partner_api
+    )
+
+
+================================================================================
+FILE: tests\dag6.py
+================================================================================
+
+"""
+DAG 6: Truncated / Misconfigured Logging
+Failure mode: the task fails but its logging is misconfigured, so the
+worker log contains no exception detail or stack trace to act on.
+Expected agent outcome: NO_CONFIDENT_FIX (negative test).
+"""
+import logging
+from datetime import datetime
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+# Misconfiguration: this logger is set to CRITICAL, so the exception
+# logged by Airflow's task handler at ERROR level never reaches the log
+# file, leaving no stack trace for the agent to analyze.
+logging.getLogger("airflow.task").setLevel(logging.CRITICAL)
+
+
+def run_batch_job(**context):
+    raise RuntimeError("Batch job failed during step 3 of 7")
+
+
+with DAG(
+    dag_id="dag6",
+    description="Truncated / Misconfigured Logging",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "ambiguous-log", "negative"],
+) as dag:
+    run_task = PythonOperator(task_id="run_batch_job", python_callable=run_batch_job)
+
+
+================================================================================
+FILE: tune_weights_3signal.py
+================================================================================
+
+#!/usr/bin/env python3
+"""
+tune_weights_3signal.py
+
+Loads confidence_signals + confidence_outcomes from BigQuery, fits weights
+for the 3-signal formula (history, logs, source), and writes the result to
+config/weights.json for nodes.py to pick up.
+
+Only run this AFTER confirming Query 1 from the guide returns real
+(non-NULL) avg_s_history / avg_s_logs / avg_s_source values. If it's still
+NULL, the record_id join is broken and this script will just exit with an
+error telling you so.
+
+Usage:
+    python tune_weights_3signal.py
+"""
+import os
+import json
+import sys
+from datetime import datetime, timezone
+
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+from sklearn.model_selection import train_test_split, KFold
+from google.cloud import bigquery
+
+PROJECT = os.environ.get("GCP_PROJECT", "dag-failure-agent-505623")
+DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+MIN_PER_CLASS = 5
+OUTPUT_PATH = os.path.join("config", "weights.json")
+
+SIGNAL_COLS = ["s_history", "s_logs", "s_source"]
+
+
+def load_data(project: str) -> pd.DataFrame:
+    query = f"""
+        SELECT
+            cs.record_id,
+            cs.s_history,
+            cs.s_logs,
+            cs.s_source,
+            co.outcome,
+            CASE WHEN co.outcome = 'merged' THEN 1 ELSE 0 END AS merged
+        FROM `{project}.{DATASET}.confidence_outcomes` co
+        LEFT JOIN `{project}.{DATASET}.confidence_signals` cs
+            ON co.record_id = cs.record_id
+        WHERE co.outcome IN ('merged', 'rejected')
+    """
+    client = bigquery.Client(project=project)
+    return client.query(query).to_dataframe()
+
+
+def validate_data(df: pd.DataFrame) -> pd.DataFrame:
+    before = len(df)
+    df = df.dropna(subset=SIGNAL_COLS)
+    dropped = before - len(df)
+    if dropped:
+        print(
+            f"WARNING: dropped {dropped}/{before} rows with NULL signals "
+            f"(record_id join didn't match for these — see the join-fix "
+            f"diagnostics before trusting this run)."
+        )
+
+    n_merged = int((df["merged"] == 1).sum())
+    n_rejected = int((df["merged"] == 0).sum())
+    print(f"Usable rows: {len(df)} (merged={n_merged}, rejected={n_rejected})")
+
+    if n_merged < MIN_PER_CLASS or n_rejected < MIN_PER_CLASS:
+        print(
+            f"ERROR: need at least {MIN_PER_CLASS} of each class with "
+            f"non-null signals. Have merged={n_merged}, rejected={n_rejected}. "
+            "Fix the record_id join or label more PRs before tuning."
+        )
+        sys.exit(1)
+
+    return df
+
+
+def compute_score(weights: np.ndarray, signals: pd.DataFrame) -> np.ndarray:
+    return (
+        weights[0] * signals["s_history"].values
+        + weights[1] * signals["s_logs"].values
+        + weights[2] * signals["s_source"].values
+    )
+
+
+def accuracy(weights: np.ndarray, signals: pd.DataFrame, outcomes: np.ndarray) -> float:
+    scores = compute_score(weights, signals)
+    predictions = (scores >= 0.5).astype(int)
+    return (predictions == outcomes).sum() / len(outcomes)
+
+
+def objective(weights: np.ndarray, signals: pd.DataFrame, outcomes: np.ndarray) -> float:
+    return -accuracy(weights, signals, outcomes)
+
+
+def fit(signals: pd.DataFrame, outcomes: np.ndarray) -> np.ndarray:
+    x0 = np.array([0.34, 0.33, 0.33])
+    bounds = [(0, 1), (0, 1), (0, 1)]
+    constraints = {"type": "eq", "fun": lambda x: x.sum() - 1.0}
+    result = minimize(
+        objective, x0, args=(signals, outcomes),
+        method="SLSQP", bounds=bounds, constraints=constraints,
+    )
+    return result.x
+
+
+def tune(df: pd.DataFrame) -> dict:
+    n = len(df)
+    signals = df[SIGNAL_COLS]
+    outcomes = df["merged"].values
+    test_acc = None
+    cv_mean = cv_std = None
+
+    # With ~13 rows a held-out 20% split leaves 2-3 rows to test on, which
+    # is not meaningful. Only split once there's enough to bother.
+    if n >= 20:
+        train, test = train_test_split(
+            df, test_size=0.2, random_state=42, stratify=df["merged"]
+        )
+        train_signals, train_outcomes = train[SIGNAL_COLS], train["merged"].values
+        test_signals, test_outcomes = test[SIGNAL_COLS], test["merged"].values
+
+        best_weights = fit(train_signals, train_outcomes)
+        train_acc = accuracy(best_weights, train_signals, train_outcomes)
+        test_acc = accuracy(best_weights, test_signals, test_outcomes)
+        print(f"Train accuracy: {train_acc:.3f} (n={len(train)})")
+        print(f"Test accuracy:  {test_acc:.3f} (n={len(test)})")
+    else:
+        print(
+            f"Only {n} rows total -- too few for a train/test split. "
+            "Fitting on all data. Treat this result as provisional and "
+            "re-tune once you have 20+ labeled examples per class."
+        )
+        best_weights = fit(signals, outcomes)
+        train_acc = accuracy(best_weights, signals, outcomes)
+        print(f"Full-data accuracy: {train_acc:.3f} (n={n})")
+
+    # K-fold CV needs enough rows per fold to mean anything; skip below 10.
+    if n >= 10:
+        k = min(5, n)
+        kf = KFold(n_splits=k, shuffle=True, random_state=42)
+        cv_accs = []
+        for fold_idx, (tr_idx, te_idx) in enumerate(kf.split(df)):
+            tr, te = df.iloc[tr_idx], df.iloc[te_idx]
+            w = fit(tr[SIGNAL_COLS], tr["merged"].values)
+            acc = accuracy(w, te[SIGNAL_COLS], te["merged"].values)
+            cv_accs.append(acc)
+            print(f"  Fold {fold_idx + 1}: {acc:.3f}")
+        cv_mean, cv_std = float(np.mean(cv_accs)), float(np.std(cv_accs))
+        print(f"Mean CV accuracy: {cv_mean:.3f} +/- {cv_std:.3f}")
+    else:
+        print("Skipping cross-validation: fewer than 10 total rows.")
+
+    return {
+        "weights": {
+            "history": round(float(best_weights[0]), 4),
+            "logs": round(float(best_weights[1]), 4),
+            "source": round(float(best_weights[2]), 4),
+        },
+        "n_samples": n,
+        "train_accuracy": round(float(train_acc), 4),
+        "test_accuracy": round(float(test_acc), 4) if test_acc is not None else None,
+        "cv_mean_accuracy": round(cv_mean, 4) if cv_mean is not None else None,
+        "cv_std_accuracy": round(cv_std, 4) if cv_std is not None else None,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def main():
+    print(f"Loading data from {PROJECT}.{DATASET} ...")
+    df = load_data(PROJECT)
+    df = validate_data(df)
+
+    result = tune(df)
+
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    with open(OUTPUT_PATH, "w") as f:
+        json.dump(result, f, indent=2)
+
+    print(f"\nWrote weights to {OUTPUT_PATH}:")
+    print(json.dumps(result["weights"], indent=2))
+    print(
+        "\nCommit config/weights.json and redeploy dag-failure-processor "
+        "for nodes.py to pick this up."
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+================================================================================
+FILE: webhook\Dockerfile
+================================================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["uvicorn", "github_webhook_app:app", "--host", "0.0.0.0", "--port", "8080"]
+
+================================================================================
+FILE: webhook\github_webhook_app.py
+================================================================================
+
+import hashlib
+import hmac
+import json
+import os
+import uuid
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, Request, HTTPException
+from google.cloud import secretmanager
+from google.cloud import storage
+from google.cloud import bigquery
+
+app = FastAPI()
+
+_sm_client = secretmanager.SecretManagerServiceClient()
+_storage_client = storage.Client()
+_bq_client = bigquery.Client()
+
+_PROJECT = os.environ["GCP_PROJECT"]
+_OUTCOMES_BUCKET = os.environ["OUTCOMES_BUCKET"]
+_BQ_DATASET = os.environ.get("BQ_DATASET", "dag_failure_agent")
+_BQ_TABLE = f"{_PROJECT}.{_BQ_DATASET}.fix_history"
+
+_secret_path = f"projects/{_PROJECT}/secrets/github-webhook-secret/versions/latest"
+_WEBHOOK_SECRET = _sm_client.access_secret_version(name=_secret_path).payload.data.decode("utf-8")
+
+
+def _verify_signature(body: bytes, signature_header: str) -> bool:
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+    expected = hmac.new(_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(f"sha256={expected}", signature_header)
+
+
+def _record_to_fix_history(record: dict, pr_number: int, merged: bool):
+    root_cause = record.get("root_cause", "")
+    proposed_fix = record.get("proposed_fix", "")
+
+    # Nothing meaningful to embed/retrieve later — skip
+    if not root_cause and not proposed_fix:
+        print(f"No root_cause/proposed_fix in record for PR #{pr_number}, skipping BQ write")
+        return
+
+    try:
+        from langchain_google_vertexai import VertexAIEmbeddings
+
+        embeddings = VertexAIEmbeddings(model_name="text-embedding-005")
+        embed_text = f"Root cause:\n{root_cause}\n\nFix:\n{proposed_fix}"
+        embedding = embeddings.embed_query(embed_text)
+
+        row = {
+            "record_id": str(uuid.uuid4()),
+            "dag_id": record.get("dag_id", ""),
+            "task_id": record.get("task_id", ""),
+            "run_id": record.get("run_id", ""),
+            "root_cause": root_cause,
+            "proposed_fix": proposed_fix,
+            "outcome": "merged" if merged else "rejected",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "embedding": embedding,
+        }
+
+        errors = _bq_client.insert_rows_json(_BQ_TABLE, [row])
+        if errors:
+            print(f"WARNING: BigQuery insert failed for PR #{pr_number}: {errors}")
+        else:
+            print(f"Inserted fix_history row for PR #{pr_number} (outcome={row['outcome']})")
+
+    except Exception as e:
+        print(f"WARNING: failed to write fix_history row for PR #{pr_number}: {e!r}")
+
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    body = await request.body()
+    signature = request.headers.get("X-Hub-Signature-256", "")
+
+    if not _verify_signature(body, signature):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    event = request.headers.get("X-GitHub-Event")
+    payload = json.loads(body)
+
+    if event != "pull_request":
+        return {"status": "ignored", "event": event}
+
+    action = payload.get("action")
+    if action != "closed":
+        return {"status": "ignored", "action": action}
+
+    pr = payload["pull_request"]
+    pr_number = pr["number"]
+    merged = pr.get("merged", False)
+
+    bucket = _storage_client.bucket(_OUTCOMES_BUCKET)
+    pending_blob = bucket.blob(f"pending/{pr_number}.json")
+
+    if not pending_blob.exists():
+        print(f"No pending record for PR #{pr_number}, skipping")
+        return {"status": "no_pending_record"}
+
+    record = json.loads(pending_blob.download_as_text())
+    record["merged"] = merged
+    record["pr_number"] = pr_number
+
+    dag_id = record["dag_id"]
+    task_id = record["task_id"]
+    history_blob = bucket.blob(f"history/{dag_id}-{task_id}/{pr_number}.json")
+    history_blob.upload_from_string(json.dumps(record))
+    pending_blob.delete()
+
+    _record_to_fix_history(record, pr_number, merged)
+    _update_confidence_outcome(record, pr_number, merged)
+
+    print(f"Recorded outcome: PR #{pr_number} merged={merged} dag={dag_id} task={task_id}")
+
+    return {"status": "recorded", "merged": merged}
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+
+def _update_confidence_outcome(record: dict, pr_number: int, merged: bool):
+    record_id = record.get("confidence_record_id")
+    if not record_id:
+        return  # older record from before this instrumentation existed
+
+    row = {
+        "record_id": record_id,
+        "outcome": "merged" if merged else "rejected",
+        "pr_number": pr_number,
+        # Re-emitted from the "opened" row pr.py wrote when the PR was
+        # created (carried here via the GCS pending record) so this final
+        # row -- the one a latest-row-per-record_id dashboard query
+        # actually picks up -- doesn't lose the diff_applied signal.
+        "diff_applied": record.get("diff_applied"),
+        "fallback_reason": record.get("fallback_reason"),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # NOTE: previously hardcoded to "dag_failure_agent" here instead of
+    # using _BQ_DATASET -- harmless today since that's also the default,
+    # but would silently write to the wrong dataset if BQ_DATASET is ever
+    # overridden for this service without updating this line too.
+    table = f"{_PROJECT}.{_BQ_DATASET}.confidence_outcomes"
+    try:
+        errors = _bq_client.insert_rows_json(table, [row])
+        if errors:
+            print(f"WARNING: confidence_outcomes insert failed: {errors}")
+    except Exception as e:
+        print(f"WARNING: failed to record confidence outcome: {e!r}")
+
+================================================================================
+FILE: webhook\Procfile
+================================================================================
+
+web: uvicorn github_webhook_app:app --host 0.0.0.0 --port $PORT
+
+
+================================================================================
+FILE: webhook\requirements.txt
+================================================================================
+
+langgraph
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-google-vertexai
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager
+PyGithub
+google-cloud-bigquery
+fastapi
+uvicorn
+unidiff
+langchain-community
+
+
+================================================================================
+FILE: webhook-env.yaml
+================================================================================
+
+GCP_PROJECT: dag-failure-agent-505623
+OUTCOMES_BUCKET: dag-failure-agent-505623-outcomes
+BQ_DATASET: dag_failure_agent
+
+================================================================================
+FILE: weight_tests\log_dependency_long.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] INFO - Task started
+[2026-08-25, 10:00:02] INFO - Waiting for upstream task extract_data
+[2026-08-25, 10:00:30] INFO - Upstream task extract_data marked as success
+[2026-08-25, 10:00:31] INFO - Reading extracted file from GCS
+[2026-08-25, 10:00:33] WARNING - File output/extract_data.csv is empty (0 bytes)
+[2026-08-25, 10:00:33] INFO - Proceeding with empty dataset
+[2026-08-25, 10:00:34] INFO - Running transform step
+[2026-08-25, 10:00:36] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag4.py", line 61, in transform
+    df = df.set_index("id")
+KeyError: "None of ['id'] are in the columns"
+[2026-08-25, 10:00:36] INFO - Upstream task extract_data silently produced no data
+
+
+================================================================================
+FILE: weight_tests\log_easy_load.txt
+================================================================================
+
+[2026-08-31 09:12:03] INFO - Task load_dataset starting for dag1
+[2026-08-31 09:12:04] INFO - Reading source table users_raw
+[2026-08-31 09:12:05] ERROR - Traceback (most recent call last):
+[2026-08-31 09:12:05] ERROR -   File "dag1.py", line 11, in load_dataset
+[2026-08-31 09:12:05] ERROR -     df['user_id']
+[2026-08-31 09:12:05] ERROR - KeyError: 'user_id'
+[2026-08-31 09:12:05] ERROR - Task failed with exception
+[2026-08-31 09:12:05] INFO - Note: upstream table users_raw renamed column user_id -> uid in the 2026-08-28 migration
+
+
+================================================================================
+FILE: weight_tests\log_easy_merge.txt
+================================================================================
+
+[2026-08-31 09:20:11] INFO - Task merge_partitions starting for dag2
+[2026-08-31 09:20:12] INFO - Resolving partition path for ds=2026-08-31
+[2026-08-31 09:20:12] ERROR - Traceback (most recent call last):
+[2026-08-31 09:20:12] ERROR -   File "dag2.py", line 14, in merge_partitions
+[2026-08-31 09:20:12] ERROR -     path = f'{base}/{ds}'
+[2026-08-31 09:20:12] ERROR - FileNotFoundError: gs://bucket/2026-08-31/part-000.parquet not found
+[2026-08-31 09:20:12] INFO - Note: partitions are actually written using ds_nodash (20260831), not ds
+
+
+================================================================================
+FILE: weight_tests\log_easy_normalize.txt
+================================================================================
+
+[2026-08-31 09:31:40] INFO - Task normalize_records starting for dag3
+[2026-08-31 09:31:41] INFO - Processing batch of 1000 records
+[2026-08-31 09:31:41] ERROR - Traceback (most recent call last):
+[2026-08-31 09:31:41] ERROR -   File "dag3.py", line 8, in normalize_records
+[2026-08-31 09:31:41] ERROR -     value.strip()
+[2026-08-31 09:31:41] ERROR - AttributeError: 'NoneType' object has no attribute 'strip'
+[2026-08-31 09:31:41] INFO - Note: record 412 had a null 'notes' field, first null seen in this field in 3 months
+
+
+================================================================================
+FILE: weight_tests\log_easy_partition.txt
+================================================================================
+
+[2026-09-10 03:14:02,201] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:14:02,203] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): read_partition> on 2026-01-15 00:00:00+00:00
+[2026-09-10 03:14:02,455] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag2.py", line 19, in read_partition
+    raise FileNotFoundError(
+FileNotFoundError: No such file or directory: '/data/warehouse/events/dt=2024-01-15/part-00000.csv'
+[2026-09-10 03:14:02,460] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag2, task_id=read_partition, execution_date=20260115T000000, start_date=20260910T031402, end_date=20260910T031402
+
+
+================================================================================
+FILE: weight_tests\log_easy_schema.txt
+================================================================================
+
+[2026-09-10 03:12:41,558] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:12:41,559] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): transform_data> on 2026-09-10 03:12:41+00:00
+[2026-09-10 03:12:41,812] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag1.py", line 30, in transform_data
+    user_ids = df["user_id"].tolist()
+  File "/usr/local/lib/python3.11/site-packages/pandas/core/frame.py", line 3893, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "/usr/local/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3798, in get_loc
+    raise KeyError(key) from err
+KeyError: 'user_id'
+[2026-09-10 03:12:41,815] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag1, task_id=transform_data, execution_date=20260910T031241, start_date=20260910T031241, end_date=20260910T031241
+
+
+================================================================================
+FILE: weight_tests\log_hard_ambiguous.txt
+================================================================================
+
+[2026-09-10 03:23:59,004] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:23:59,006] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): run_batch_job> on 2026-09-10 03:23:59+00:00
+[2026-09-10 03:24:11,442] {local_task_job_runner.py:266} INFO - Task exited with return code 1
+[2026-09-10 03:24:11,450] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag6, task_id=run_batch_job, execution_date=20260910T032359, start_date=20260910T032359, end_date=20260910T032411
+
+
+================================================================================
+FILE: weight_tests\log_hard_enrich.txt
+================================================================================
+
+[2026-08-31 10:02:11] INFO - Task enrich_with_scores starting for dag4
+[2026-08-31 10:02:15] INFO - Batch 1/4 enriched successfully
+[2026-08-31 10:02:19] WARNING - Retry 1 for external scoring service (timeout)
+[2026-08-31 10:02:24] INFO - Batch 2/4 enriched successfully
+[2026-08-31 10:02:31] WARNING - Retry 2 for external scoring service (timeout)
+[2026-08-31 10:02:40] ERROR - Task failed after 3 retries
+[2026-08-31 10:02:40] ERROR - Exception raised but no stack trace captured (logger misconfigured on this attempt)
+[2026-08-31 10:02:41] INFO - Batch 3/4 enriched successfully after task was already marked failed
+[2026-08-31 10:02:44] WARNING - Scoring service status page shows no reported incident during this window
+
+
+================================================================================
+FILE: weight_tests\log_hard_partner.txt
+================================================================================
+
+[2026-09-10 03:20:44,110] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:20:44,112] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): call_partner_api> on 2026-09-10 03:20:44+00:00
+[2026-09-10 03:21:14,890] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag5.py", line 18, in call_partner_api
+    response.raise_for_status()
+  File "/usr/local/lib/python3.11/site-packages/requests/models.py", line 1024, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://partner-api.example.com/v2/report
+[2026-09-10 03:21:14,895] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag5, task_id=call_partner_api, execution_date=20260910T032044, start_date=20260910T032044, end_date=20260910T032114
+
+
+================================================================================
+FILE: weight_tests\log_hard_report.txt
+================================================================================
+
+[2026-08-31 10:40:02] INFO - Task write_report_to_gcs starting for dag5
+[2026-08-31 10:40:05] INFO - Report generated, 4.2MB, beginning upload
+[2026-08-31 10:41:35] WARNING - Upload slower than expected (90s elapsed)
+[2026-08-31 10:42:05] ERROR - Task failed: upload did not complete within timeout
+[2026-08-31 10:42:05] INFO - GCS bucket metrics show normal latency during this window
+[2026-08-31 10:42:06] INFO - No errors logged on the storage client side; task-level timeout was hit first
+[2026-08-31 10:42:07] WARNING - This task has intermittently failed 2 of the last 10 runs with the same symptom
+
+
+================================================================================
+FILE: weight_tests\log_import_error.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag2.py", line 5, in <module>
+    import pandas_extra_utils
+ModuleNotFoundError: No module named 'pandas_extra_utils'
+
+
+================================================================================
+FILE: weight_tests\log_medium_import.txt
+================================================================================
+
+[2026-09-10 03:18:05,331] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:18:05,332] {dagbag.py:588} ERROR - Failed to import: /opt/airflow/dags/tests/dag4.py
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag4.py", line 11, in <module>
+    from utils.metrics_helper import compute_engagement_score
+ModuleNotFoundError: No module named 'utils.metrics_helper'
+[2026-09-10 03:18:05,335] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag4, task_id=score_engagement, execution_date=20260910T031805, start_date=20260910T031805, end_date=20260910T031805
+
+
+================================================================================
+FILE: weight_tests\log_medium_null.txt
+================================================================================
+
+[2026-09-10 03:16:18,904] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:16:18,905] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): clean_records> on 2026-09-10 03:16:18+00:00
+[2026-09-10 03:16:18,977] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag3.py", line 21, in clean_records
+    normalized_email = record["email"].lower()
+AttributeError: 'NoneType' object has no attribute 'lower'
+[2026-09-10 03:16:18,980] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag3, task_id=clean_records, execution_date=20260910T031618, start_date=20260910T031618, end_date=20260910T031618
+
+
+================================================================================
+FILE: weight_tests\log_null_ambiguous.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] INFO - Task started
+[2026-08-25, 10:00:02] INFO - Fetching config from metadata service
+[2026-08-25, 10:00:04] INFO - Config loaded: {"batch_size": 100, "retries": 3}
+[2026-08-25, 10:00:06] INFO - Processing batch 1
+[2026-08-25, 10:00:09] DEBUG - Merging upstream results
+[2026-08-25, 10:00:11] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag3.py", line 88, in merge_results
+    total = result.value + baseline.value
+AttributeError: 'NoneType' object has no attribute 'value'
+[2026-08-25, 10:00:11] INFO - Cleanup started
+
+
+================================================================================
+FILE: weight_tests\log_permission_short.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+google.api_core.exceptions.Forbidden: 403 GET https://storage.googleapis.com/storage/v1/b/agent-data/o/output.csv: Access denied
+
+
+================================================================================
+FILE: weight_tests\log_timeout_long.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] INFO - Task started
+[2026-08-25, 10:00:05] INFO - Connecting to upstream service
+[2026-08-25, 10:00:10] INFO - Waiting for response...
+[2026-08-25, 10:01:10] WARNING - No response after 60s, retrying (1/5)
+[2026-08-25, 10:02:10] WARNING - No response after 60s, retrying (2/5)
+[2026-08-25, 10:03:10] WARNING - No response after 60s, retrying (3/5)
+[2026-08-25, 10:04:10] WARNING - No response after 60s, retrying (4/5)
+[2026-08-25, 10:05:10] WARNING - No response after 60s, retrying (5/5)
+[2026-08-25, 10:05:10] ERROR - Max retries exceeded
+[2026-08-25, 10:05:10] ERROR - airflow.exceptions.AirflowTaskTimeout: Task exceeded execution_timeout of 300s
+
+
+================================================================================
+FILE: weight_tests\log_typo_short.txt
+================================================================================
+
+﻿[2026-08-25, 10:00:00] ERROR - Task failed
+Traceback (most recent call last):
+  File "dag1.py", line 42, in transform
+    value = row["colum_name"]
+KeyError: 'colum_name'
+

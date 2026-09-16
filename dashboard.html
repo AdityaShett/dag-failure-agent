@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>dag-failure-agent — benchmark &amp; weight tuning</title>
+<style>
+  :root{
+    --bg:#0E1116; --panel:#161A22; --panel-2:#1C212B; --border:#262C38;
+    --text:#E6E9EF; --muted:#8A93A3; --accent:#6C8CFF;
+    --ok:#5FBE8A; --wait:#E0A458; --bad:#E0616B;
+    --mono: ui-monospace, "SFMono-Regular", "IBM Plex Mono", Menlo, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  :root:not([data-theme="dark"]){ }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#F7F8FA; --panel:#FFFFFF; --panel-2:#F0F2F6; --border:#DDE1E8;
+      --text:#141821; --muted:#5C6473; --accent:#3B5BDB;
+      --ok:#2F9E68; --wait:#B87514; --bad:#C23B47;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1116; --panel:#161A22; --panel-2:#1C212B; --border:#262C38;
+    --text:#E6E9EF; --muted:#8A93A3; --accent:#6C8CFF;
+    --ok:#5FBE8A; --wait:#E0A458; --bad:#E0616B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); padding:28px 22px 70px; line-height:1.5;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:14px; border-bottom:1px solid var(--border);
+    padding-bottom:18px; margin-bottom:24px;
+  }
+  h1{font-size:21px; font-weight:600; margin:0 0 5px; letter-spacing:-0.01em;}
+  header p{margin:0; color:var(--muted); font-size:13px; max-width:620px;}
+  .controls{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  button, label.filebtn{
+    border:1px solid var(--border); background:var(--panel); color:var(--text);
+    padding:7px 13px; border-radius:6px; cursor:pointer; font-size:12.5px;
+    font-family:var(--sans);
+  }
+  button:hover, label.filebtn:hover{border-color:var(--accent);}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  input[type=file]{display:none;}
+  #sourceTag{font-family:var(--mono); font-size:11.5px; color:var(--muted);}
+
+  section{margin-bottom:30px;}
+  h2{
+    font-size:12.5px; color:var(--muted); font-weight:600; margin:0 0 13px;
+    display:flex; align-items:center; gap:10px; text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  h2::after{content:""; height:1px; flex:1; background:var(--border);}
+
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px;}
+  .stat{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 16px;}
+  .stat .n{font-family:var(--mono); font-size:24px; font-weight:600; line-height:1;}
+  .stat .l{margin-top:7px; font-size:11.5px; color:var(--muted);}
+  .stat.ok .n{color:var(--ok);} .stat.wait .n{color:var(--wait);} .stat.bad .n{color:var(--bad);}
+
+  .cols{display:grid; grid-template-columns:minmax(300px,1fr) minmax(320px,1.25fr); gap:20px; align-items:start;}
+  @media (max-width:860px){ .cols{grid-template-columns:1fr;} }
+
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px 18px;}
+  .panel h3{margin:0 0 4px; font-size:14px; font-weight:600;}
+  .panel .hint{margin:0 0 14px; font-size:12px; color:var(--muted);}
+
+  .slider-row{display:grid; grid-template-columns:1fr 52px; gap:10px; align-items:center; margin-bottom:11px;}
+  .slider-row .lbl{font-size:12.5px;}
+  .slider-row .lbl small{display:block; color:var(--muted); font-size:11px; font-family:var(--mono);}
+  .slider-row input[type=range]{width:100%; accent-color:var(--accent);}
+  .slider-row .val{font-family:var(--mono); font-size:12.5px; text-align:right;}
+  .penalty .lbl{color:var(--bad);}
+  .thresh .lbl{color:var(--accent);}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .scroll{overflow-x:auto;}
+  th{
+    text-align:left; font-weight:500; color:var(--muted); font-size:11px;
+    text-transform:uppercase; letter-spacing:0.04em; padding:8px 10px;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  td{padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  .mono{font-family:var(--mono);}
+  .muted{color:var(--muted);}
+  .badge{
+    display:inline-block; padding:2px 7px; border-radius:11px; font-size:11px;
+    border:1px solid var(--border); background:var(--panel-2);
+  }
+  .dot{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px;}
+  .dot.ok{background:var(--ok);} .dot.wait{background:var(--wait);} .dot.bad{background:var(--bad);}
+  a{color:var(--accent);}
+
+  .bar-row{display:grid; grid-template-columns:150px 1fr 48px; gap:10px; align-items:center; margin-bottom:8px; font-size:12px;}
+  .bar-track{position:relative; height:19px; background:var(--panel-2); border-radius:4px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:4px;}
+  .bar-thresh{position:absolute; top:0; bottom:0; width:2px; background:var(--accent);}
+  .bar-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .bar-val{font-family:var(--mono); text-align:right;}
+
+  .cm{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:14px 0 10px;}
+  .cm div{background:var(--panel-2); border-radius:6px; padding:9px; text-align:center;}
+  .cm .k{font-size:10.5px; color:var(--muted); letter-spacing:0.04em;}
+  .cm .v{font-family:var(--mono); font-size:17px; font-weight:600;}
+  .metrics{display:flex; flex-wrap:wrap; gap:14px; font-family:var(--mono); font-size:12.5px;}
+  .metrics span b{color:var(--ok);}
+  .flag{color:var(--bad); font-size:12px; margin-top:10px;}
+
+  pre{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:6px;
+    padding:12px; overflow-x:auto; font-family:var(--mono); font-size:11.5px;
+    max-height:280px; margin:12px 0 0;
+  }
+  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--border); color:var(--muted); font-size:11.5px;}
+  code{font-family:var(--mono); background:var(--panel-2); padding:1px 5px; border-radius:4px; font-size:11.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>dag-failure-agent — benchmark &amp; weight tuning</h1>
+    <p>Every score below is recomputed in-page from each run's raw signals using the
+    same weighted-mean formula as <code>processor/agent/confidence.py</code>.
+    Move a slider and the decisions move with it.</p>
+  </div>
+  <div class="controls">
+    <button id="btnBenchmark" class="primary">Benchmark (6)</button>
+    <button id="btnFixtures">Fixtures (17)</button>
+    <label class="filebtn" for="resultsInput">Load results.json</label>
+    <input type="file" id="resultsInput" accept=".json" />
+    <label class="filebtn" for="weightsInput">Load weights.json</label>
+    <input type="file" id="weightsInput" accept=".json" />
+    <button id="btnTheme">Theme</button>
+  </div>
+</header>
+
+<div id="sourceTag"></div>
+
+<section>
+  <div class="stats" id="statsRow"></div>
+</section>
+
+<section class="cols">
+  <div class="panel">
+    <h3>Weight playground</h3>
+    <p class="hint">Positive weights are a weighted mean over the signals present on a run;
+    the penalty is subtracted afterwards. Signals a run doesn't have are dropped and the
+    mean renormalised — never guessed.</p>
+    <div id="sliders"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
+      <button id="btnFit" class="primary">Auto-fit</button>
+      <button id="btnReset">Reset to file</button>
+      <button id="btnExport">Show weights.json</button>
+    </div>
+    <div id="fitNote" class="hint" style="margin-top:10px;"></div>
+    <pre id="exportBox" style="display:none;"></pre>
+  </div>
+
+  <div class="panel">
+    <h3>Decision quality</h3>
+    <p class="hint" id="qualityHint"></p>
+    <div class="cm" id="confusion"></div>
+    <div class="metrics" id="metrics"></div>
+    <div class="flag" id="qualityFlag"></div>
+    <h3 style="margin-top:20px;">Confidence vs threshold</h3>
+    <div id="bars" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Runs</h2>
+  <div class="scroll"><table>
+    <thead><tr id="runsHead"></tr></thead>
+    <tbody id="runsBody"></tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Signal matrix</h2>
+  <div class="scroll"><table>
+    <thead><tr id="signalsHead"></tr></thead>
+    <tbody id="signalsBody"></tbody>
+  </table></div>
+</section>
+
+<footer>
+  Data files: <code>results/results.json</code> (from <code>run_benchmark_local.py</code> or
+  <code>export_results.py</code>) and <code>config/weights.json</code>. Each run needs a
+  <code>signals</code> object for the playground to re-score it; rows without one are shown
+  with their stored score and excluded from tuning. Rows labelled <code>local-scoring</code>
+  are the confidence gate only — no LLM call, no PR.
+</footer>
+
+</div>
+
+<script>
+const EMBEDDED_RUNS = [
+  {
+    "run_id": "local-schema_drift_dag1-20260916T152836Z",
+    "scenario_id": "schema_drift_dag1",
+    "dag_id": "dag1",
+    "task_id": "transform_data",
+    "difficulty": "easy",
+    "failure_type": "KeyError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 1.0,
+    "confidence_tier": "high",
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.326822+00:00"
+  },
+  {
+    "run_id": "local-macro_mismatch_dag2-20260916T152836Z",
+    "scenario_id": "macro_mismatch_dag2",
+    "dag_id": "dag2",
+    "task_id": "read_partition",
+    "difficulty": "easy",
+    "failure_type": "FileNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 1.0,
+    "confidence_tier": "high",
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.326980+00:00"
+  },
+  {
+    "run_id": "local-null_handling_dag3-20260916T152836Z",
+    "scenario_id": "null_handling_dag3",
+    "dag_id": "dag3",
+    "task_id": "clean_records",
+    "difficulty": "medium",
+    "failure_type": "AttributeError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 1.0,
+    "confidence_tier": "high",
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.327157+00:00"
+  },
+  {
+    "run_id": "local-missing_import_dag4-20260916T152836Z",
+    "scenario_id": "missing_import_dag4",
+    "dag_id": "dag4",
+    "task_id": "score_engagement",
+    "difficulty": "medium",
+    "failure_type": "ModuleNotFoundError",
+    "expected_outcome": "PR_CREATED",
+    "actual_outcome": "PR_CREATED",
+    "confidence_score": 1.0,
+    "confidence_tier": "high",
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.327304+00:00"
+  },
+  {
+    "run_id": "local-partner_outage_dag5-20260916T152836Z",
+    "scenario_id": "partner_outage_dag5",
+    "dag_id": "dag5",
+    "task_id": "call_partner_api",
+    "difficulty": "hard",
+    "failure_type": "HTTPError_500_external",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.3273,
+    "confidence_tier": "low",
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 1.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.327429+00:00"
+  },
+  {
+    "run_id": "local-ambiguous_log_dag6-20260916T152836Z",
+    "scenario_id": "ambiguous_log_dag6",
+    "dag_id": "dag6",
+    "task_id": "run_batch_job",
+    "difficulty": "hard",
+    "failure_type": "no_stack_trace",
+    "expected_outcome": "NO_CONFIDENT_FIX",
+    "actual_outcome": "NO_CONFIDENT_FIX",
+    "confidence_score": 0.0682,
+    "confidence_tier": "low",
+    "signals": {
+      "stack_trace_present": 0.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "mode": "local-scoring",
+    "timestamp": "2026-09-16T15:28:36.327515+00:00"
+  }
+];
+const EMBEDDED_FIXTURES = [
+  {
+    "id": "schema_drift_dag1",
+    "group": "benchmark",
+    "label": 1,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "KeyError 'user_id' at dag1.py:30, line present in current source."
+  },
+  {
+    "id": "macro_mismatch_dag2",
+    "group": "benchmark",
+    "label": 1,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "ds vs ds_nodash partition path, FileNotFoundError at dag2.py:19."
+  },
+  {
+    "id": "null_handling_dag3",
+    "group": "benchmark",
+    "label": 1,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "AttributeError on None email at dag3.py:21."
+  },
+  {
+    "id": "missing_import_dag4",
+    "group": "benchmark",
+    "label": 1,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "ModuleNotFoundError at dag4.py:11, import line present in current source."
+  },
+  {
+    "id": "partner_outage_dag5",
+    "group": "benchmark",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 1.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 1.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Negative test: third-party 500. Traceback is perfect, source matches -- only the external-dependency penalty should keep this under threshold."
+  },
+  {
+    "id": "ambiguous_log_dag6",
+    "group": "benchmark",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 0.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Negative test: logger at CRITICAL, no traceback ever reaches the log."
+  },
+  {
+    "id": "legacy_load_dataset",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Pre-rewrite log. The failing line df['user_id'] at dag1.py:11 does not exist in the current dag1.py -- correct behaviour is to refuse, not to patch a line that isn't there."
+  },
+  {
+    "id": "legacy_merge_partitions",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Pre-rewrite log referencing a merge_partitions task that no longer exists."
+  },
+  {
+    "id": "legacy_normalize_records",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Pre-rewrite log referencing normalize_records; not in current dag3.py."
+  },
+  {
+    "id": "legacy_enrich_with_scores",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 0.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.6,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "External scoring service timeouts and an explicitly missing stack trace."
+  },
+  {
+    "id": "legacy_write_report_to_gcs",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 0.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Upload timeout with no traceback; infra-shaped, intermittent."
+  },
+  {
+    "id": "legacy_import_error",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 0.8333,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Import of pandas_extra_utils at dag2.py:5 -- not in the current file."
+  },
+  {
+    "id": "legacy_null_ambiguous",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "AttributeError at dag3.py:88 -- past the end of the current file."
+  },
+  {
+    "id": "legacy_permission_denied",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 0.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 0.3333,
+      "external_dependency_detected": 0.6,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "403 from GCS: an IAM problem, not a code problem."
+  },
+  {
+    "id": "legacy_task_timeout",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 0.4,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 0.0,
+      "log_completeness": 0.6667,
+      "external_dependency_detected": 1.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "AirflowTaskTimeout after 5 retries against an unresponsive upstream."
+  },
+  {
+    "id": "legacy_typo_keyerror",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 0.8333,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "KeyError 'colum_name' at dag1.py:42 in a transform() that is not in the current file."
+  },
+  {
+    "id": "legacy_dependency_empty_input",
+    "group": "legacy",
+    "label": 0,
+    "signals": {
+      "stack_trace_present": 1.0,
+      "line_number_matches_source": 0.0,
+      "known_fix_pattern_match": 1.0,
+      "log_completeness": 1.0,
+      "external_dependency_detected": 0.0,
+      "history_merge_rate": null,
+      "retrieval_support": null
+    },
+    "notes": "Empty upstream file at dag4.py:61 -- line does not exist in the current file."
+  }
+];
+const EMBEDDED_WEIGHTS = {
+  "version": 2,
+  "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold. Edit by hand, or regenerate with `python tune_weights.py`.",
+  "signal_weights": {
+    "stack_trace_present": 0.24,
+    "line_number_matches_source": 0.34,
+    "known_fix_pattern_match": 0.24,
+    "log_completeness": 0.06,
+    "history_merge_rate": 0.07,
+    "retrieval_support": 0.05
+  },
+  "penalty_weights": {
+    "external_dependency_detected": -0.4
+  },
+  "confidence_threshold": 0.7,
+  "tier_thresholds": {
+    "high": 0.85,
+    "medium": 0.6
+  },
+  "notes": {
+    "stack_trace_present": "1.0 for a full traceback with an exception line; 0.8 frames but no 'Traceback' header; 0.4 exception line only; 0.0 nothing (dag6).",
+    "line_number_matches_source": "1.0 the failing line of code is where the traceback says it is; 0.6 it exists elsewhere in the file; 0.25 only the function matches; 0.0 the code isn't in this file at all. This is the guard that catches a stale or wrong DAG source being analysed against a fresh log.",
+    "known_fix_pattern_match": "1.0 if the exception type is in confidence.KNOWN_FIX_PATTERNS (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError, ...).",
+    "log_completeness": "Fraction of six checks: timestamps, level markers, >=4 lines, task_id present, dag_id present, >=200 chars.",
+    "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. Omitted (not guessed) when there is no history.",
+    "retrieval_support": "OPTIONAL. min(1, similar prior incidents found / 5).",
+    "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage (dag5). Subtracted from the weighted mean so an otherwise-perfect log still lands below threshold, because no change to this repo fixes it."
+  },
+  "metadata": {
+    "source": "hand-tuned, validated against config/tuning_fixtures.json (17 rows) with `python tune_weights.py score`",
+    "measured": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_samples": 17,
+      "n_positive": 4
+    },
+    "margin": "nearest negative scores 0.614 against a 0.70 threshold; nearest positive scores 1.000",
+    "note": "Regenerate with `python tune_weights.py fit --apply` once BigQuery has >=5 human-labeled PR outcomes per class; that overwrites this block with fitted values and their cross-validated accuracy."
+  }
+};
+
+const POSITIVE = ["stack_trace_present","line_number_matches_source",
+  "known_fix_pattern_match","log_completeness","history_merge_rate","retrieval_support"];
+const PENALTY = ["external_dependency_detected"];
+
+const SIGNAL_HINTS = {
+  stack_trace_present: "full traceback + exception",
+  line_number_matches_source: "failing line exists where the log says",
+  known_fix_pattern_match: "exception has a template fix",
+  log_completeness: "timestamps, levels, dag/task context",
+  history_merge_rate: "past PRs merged for this task",
+  retrieval_support: "similar prior incidents found",
+  external_dependency_detected: "third-party / infra failure",
+};
+
+let state = {
+  rows: [],
+  label: "",
+  weights: null,      // live, editable
+  fileWeights: null,  // last loaded from file/embed, for reset
+};
+
+// ---------- scoring: mirrors processor/agent/confidence.py ----------
+function scoreSignals(signals, w){
+  if (!signals) return null;
+  let numer = 0, denom = 0;
+  for (const name of POSITIVE){
+    const v = signals[name];
+    if (v === null || v === undefined) continue;
+    const weight = w.signal_weights[name] ?? 0;
+    numer += weight * Math.max(0, Math.min(1, v));
+    denom += weight;
+  }
+  let score = denom > 0 ? numer / denom : 0;
+  for (const name of PENALTY){
+    const v = signals[name];
+    if (v === null || v === undefined) continue;
+    score += (w.penalty_weights[name] ?? 0) * Math.max(0, Math.min(1, v));
+  }
+  return Math.max(0, Math.min(1, score));
+}
+
+function rowLabel(r){
+  if (r.label !== undefined && r.label !== null) return Number(r.label);
+  if (r.expected_outcome === "PR_CREATED") return 1;
+  if (r.expected_outcome === "NO_CONFIDENT_FIX") return 0;
+  return null;
+}
+
+function rowName(r){
+  return r.scenario_id || r.id || r.run_id || r.dag_id || "run";
+}
+
+function evaluate(rows, w){
+  const t = w.confidence_threshold;
+  let tp=0, fp=0, tn=0, fn=0, scored=0;
+  const out = rows.map(r => {
+    const score = r.signals ? scoreSignals(r.signals, w) : (r.confidence_score ?? null);
+    const live = !!r.signals;
+    const decision = score === null ? null : (score >= t ? "PR_CREATED" : "NO_CONFIDENT_FIX");
+    const label = rowLabel(r);
+    if (live && label !== null && score !== null){
+      scored++;
+      const pred = score >= t;
+      if (pred && label === 1) tp++;
+      else if (pred && label === 0) fp++;
+      else if (!pred && label === 1) fn++;
+      else tn++;
+    }
+    return {...r, _score: score, _decision: decision, _label: label, _live: live};
+  });
+  const n = tp+fp+tn+fn || 1;
+  const precision = (tp+fp) ? tp/(tp+fp) : 0;
+  const recall = (tp+fn) ? tp/(tp+fn) : 0;
+  const specificity = (tn+fp) ? tn/(tn+fp) : 0;
+  return {
+    rows: out, scored,
+    cm: {tp, fp, tn, fn},
+    accuracy: (tp+tn)/n, precision, recall, specificity,
+    balanced: (recall+specificity)/2,
+    f1: (precision+recall) ? 2*precision*recall/(precision+recall) : 0,
+  };
+}
+
+function separation(rows, t){
+  let below = 1, above = 1;
+  for (const r of rows){
+    if (r._score === null) continue;
+    if (r._score < t) below = Math.min(below, t - r._score);
+    else above = Math.min(above, r._score - t);
+  }
+  return Math.min(below, above);
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+
+function renderStats(ev){
+  const rows = ev.rows;
+  const total = rows.length;
+  const created = rows.filter(r => r._decision === "PR_CREATED").length;
+  const noFix = rows.filter(r => r._decision === "NO_CONFIDENT_FIX").length;
+  const missing = rows.filter(r => r.actual_outcome === "NO_RESULT").length;
+  const unexpected = rows.filter(r =>
+    r.expected_outcome && r._decision && r._decision !== r.expected_outcome).length;
+
+  $("statsRow").innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="l">Runs</div></div>
+    <div class="stat ok"><div class="n">${created}</div><div class="l">Would open a PR</div></div>
+    <div class="stat wait"><div class="n">${noFix}</div><div class="l">No confident fix</div></div>
+    <div class="stat ${unexpected ? "bad" : ""}"><div class="n">${unexpected}</div><div class="l">Unexpected outcome</div></div>
+    ${missing ? `<div class="stat bad"><div class="n">${missing}</div><div class="l">Published, no result</div></div>` : ""}
+    <div class="stat"><div class="n">${(ev.accuracy*100).toFixed(0)}%</div><div class="l">Accuracy (${ev.scored} labelled)</div></div>
+  `;
+}
+
+function renderSliders(){
+  const w = state.weights;
+  const rows = [];
+  for (const name of POSITIVE){
+    const v = w.signal_weights[name] ?? 0;
+    rows.push(`
+      <div class="slider-row">
+        <div class="lbl">${name}<small>${SIGNAL_HINTS[name]}</small>
+          <input type="range" min="0" max="1" step="0.01" value="${v}" data-kind="signal" data-name="${name}" />
+        </div>
+        <div class="val" id="v_${name}">${v.toFixed(2)}</div>
+      </div>`);
+  }
+  for (const name of PENALTY){
+    const v = Math.abs(w.penalty_weights[name] ?? 0);
+    rows.push(`
+      <div class="slider-row penalty">
+        <div class="lbl">${name} (penalty)<small>${SIGNAL_HINTS[name]}</small>
+          <input type="range" min="0" max="1" step="0.01" value="${v}" data-kind="penalty" data-name="${name}" />
+        </div>
+        <div class="val" id="v_${name}">-${v.toFixed(2)}</div>
+      </div>`);
+  }
+  rows.push(`
+    <div class="slider-row thresh">
+      <div class="lbl">confidence_threshold<small>a PR needs a score at or above this</small>
+        <input type="range" min="0" max="1" step="0.01" value="${w.confidence_threshold}" data-kind="threshold" data-name="threshold" />
+      </div>
+      <div class="val" id="v_threshold">${w.confidence_threshold.toFixed(2)}</div>
+    </div>`);
+
+  $("sliders").innerHTML = rows.join("");
+  $("sliders").querySelectorAll("input[type=range]").forEach(input => {
+    input.addEventListener("input", e => {
+      const {kind, name} = e.target.dataset;
+      const value = parseFloat(e.target.value);
+      if (kind === "signal") state.weights.signal_weights[name] = value;
+      else if (kind === "penalty") state.weights.penalty_weights[name] = -value;
+      else state.weights.confidence_threshold = value;
+      render(false);
+    });
+  });
+}
+
+function syncSliderValues(){
+  const w = state.weights;
+  for (const name of POSITIVE){
+    const el = $("v_"+name);
+    if (el) el.textContent = (w.signal_weights[name] ?? 0).toFixed(2);
+  }
+  for (const name of PENALTY){
+    const el = $("v_"+name);
+    if (el) el.textContent = "-" + Math.abs(w.penalty_weights[name] ?? 0).toFixed(2);
+  }
+  $("v_threshold").textContent = w.confidence_threshold.toFixed(2);
+  $("sliders").querySelectorAll("input[type=range]").forEach(input => {
+    const {kind, name} = input.dataset;
+    if (kind === "signal") input.value = w.signal_weights[name] ?? 0;
+    else if (kind === "penalty") input.value = Math.abs(w.penalty_weights[name] ?? 0);
+    else input.value = w.confidence_threshold;
+  });
+}
+
+function renderQuality(ev){
+  const cm = ev.cm;
+  $("qualityHint").textContent = ev.scored
+    ? `${ev.scored} run(s) have both a label and raw signals, so they can be re-scored live.`
+    : "No labelled runs with raw signals in this dataset — load fixtures or a results.json that includes a signals object.";
+  $("confusion").innerHTML = `
+    <div><div class="k">TP</div><div class="v" style="color:var(--ok)">${cm.tp}</div></div>
+    <div><div class="k">FP</div><div class="v" style="color:var(--bad)">${cm.fp}</div></div>
+    <div><div class="k">TN</div><div class="v" style="color:var(--ok)">${cm.tn}</div></div>
+    <div><div class="k">FN</div><div class="v" style="color:var(--bad)">${cm.fn}</div></div>`;
+  $("metrics").innerHTML = `
+    <span>accuracy <b>${ev.accuracy.toFixed(3)}</b></span>
+    <span>precision <b>${ev.precision.toFixed(3)}</b></span>
+    <span>recall <b>${ev.recall.toFixed(3)}</b></span>
+    <span>f1 <b>${ev.f1.toFixed(3)}</b></span>
+    <span>margin <b>${separation(ev.rows, state.weights.confidence_threshold).toFixed(3)}</b></span>`;
+
+  const flags = [];
+  if (cm.fp) flags.push(`${cm.fp} false positive(s): the agent would open a PR on a failure it can't actually fix.`);
+  if (cm.fn) flags.push(`${cm.fn} false negative(s): a fixable failure would be dropped.`);
+  const margin = separation(ev.rows, state.weights.confidence_threshold);
+  if (ev.scored && margin < 0.03) flags.push(`Margin is ${margin.toFixed(3)} — the threshold is sitting almost on top of a run. Small signal changes will flip it.`);
+  $("qualityFlag").innerHTML = flags.join("<br>");
+}
+
+function renderBars(ev){
+  const t = state.weights.confidence_threshold;
+  const sorted = [...ev.rows].sort((a,b) => (b._score ?? 0) - (a._score ?? 0));
+  $("bars").innerHTML = sorted.map(r => {
+    const score = r._score ?? 0;
+    const label = r._label;
+    let color = "var(--muted)";
+    if (label === 1) color = (score >= t) ? "var(--ok)" : "var(--bad)";
+    else if (label === 0) color = (score >= t) ? "var(--bad)" : "var(--wait)";
+    else color = (score >= t) ? "var(--ok)" : "var(--wait)";
+    return `<div class="bar-row">
+      <div class="bar-label mono" title="${rowName(r)}">${rowName(r)}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(score*100).toFixed(1)}%; background:${color};"></div>
+        <div class="bar-thresh" style="left:${(t*100).toFixed(1)}%;"></div>
+      </div>
+      <div class="bar-val">${score.toFixed(2)}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderRuns(ev){
+  const cols = ["run","dag / task","difficulty","failure","expected","decision","score","PR"];
+  $("runsHead").innerHTML = cols.map(c => `<th>${c}</th>`).join("");
+  $("runsBody").innerHTML = ev.rows.map(r => {
+    const ok = !r.expected_outcome || r._decision === r.expected_outcome;
+    const dot = r.actual_outcome === "NO_RESULT" ? "bad"
+      : (!ok ? "bad" : (r._decision === "PR_CREATED" ? "ok" : "wait"));
+    const pr = r.pr_url
+      ? `<a href="${r.pr_url}" target="_blank" rel="noopener">#${String(r.pr_url).split("/").pop()}</a>`
+      : (r.pr_number ? `#${r.pr_number}` : `<span class="muted">—</span>`);
+    return `<tr>
+      <td class="mono">${rowName(r)}</td>
+      <td>${r.dag_id ?? "—"}${r.task_id ? ` <span class="muted">· ${r.task_id}</span>` : ""}</td>
+      <td><span class="badge">${r.difficulty ?? "—"}</span></td>
+      <td class="mono muted">${r.failure_type ?? r.notes ?? "—"}</td>
+      <td class="mono muted">${r.expected_outcome ?? (r._label === null ? "—" : (r._label ? "PR_CREATED" : "NO_CONFIDENT_FIX"))}</td>
+      <td><span class="dot ${dot}"></span><span class="mono">${r.actual_outcome === "NO_RESULT" ? "NO_RESULT" : (r._decision ?? "—")}</span></td>
+      <td class="mono">${r._score === null ? "—" : r._score.toFixed(3)}${r._live ? "" : " *"}</td>
+      <td>${pr}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderSignalTable(ev){
+  const names = [...POSITIVE, ...PENALTY];
+  $("signalsHead").innerHTML = `<th>run</th>` + names.map(n =>
+    `<th title="${SIGNAL_HINTS[n]}">${n.replace(/_/g," ")}</th>`).join("") + `<th>score</th>`;
+  $("signalsBody").innerHTML = ev.rows.map(r => {
+    const cells = names.map(n => {
+      const v = r.signals ? r.signals[n] : undefined;
+      if (v === null || v === undefined) return `<td class="muted mono">n/a</td>`;
+      const strong = n === "external_dependency_detected" ? v > 0 : v >= 0.999;
+      const weak = n === "external_dependency_detected" ? v === 0 : v === 0;
+      let color = "";
+      if (n === "external_dependency_detected") color = v > 0 ? "color:var(--bad)" : "";
+      else color = v >= 0.999 ? "color:var(--ok)" : (v === 0 ? "color:var(--bad)" : "");
+      return `<td class="mono" style="${color}">${Number(v).toFixed(2)}</td>`;
+    }).join("");
+    return `<tr><td class="mono">${rowName(r)}</td>${cells}<td class="mono">${r._score === null ? "—" : r._score.toFixed(3)}</td></tr>`;
+  }).join("");
+}
+
+function render(resyncSliders){
+  const ev = evaluate(state.rows, state.weights);
+  renderStats(ev);
+  if (resyncSliders) renderSliders(); else syncSliderValues();
+  renderQuality(ev);
+  renderBars(ev);
+  renderRuns(ev);
+  renderSignalTable(ev);
+  $("sourceTag").textContent = state.label;
+}
+
+// ---------- auto-fit (same shape as tune_weights.py, in miniature) ----------
+function activeSignals(rows){
+  // A signal with no data in the loaded rows cannot be fitted -- any weight
+  // it gets is noise. Those keep whatever they already had.
+  return POSITIVE.filter(n => rows.some(r =>
+    r.signals && r.signals[n] !== null && r.signals[n] !== undefined));
+}
+
+function objective(ev, w, active){
+  // balanced accuracy, plus small terms for margin and for keeping weights
+  // spread out -- without the spread term this collapses onto one signal.
+  const even = 1 / active.length;
+  const total = active.reduce((s,n) => s + (w.signal_weights[n] ?? 0), 0) || 1;
+  const conc = Math.sqrt(active.reduce((s,n) =>
+    s + Math.pow((w.signal_weights[n] ?? 0)/total - even, 2), 0));
+  return ev.balanced + 0.01 * separation(ev.rows, w.confidence_threshold) - 0.08 * conc;
+}
+
+function cloneWeights(w){
+  return {
+    signal_weights: {...w.signal_weights},
+    penalty_weights: {...w.penalty_weights},
+    confidence_threshold: w.confidence_threshold,
+    tier_thresholds: {...(w.tier_thresholds || {high:0.85, medium:0.6})},
+  };
+}
+
+function bestThreshold(rows, w, active){
+  const scores = rows.filter(r => r.signals && rowLabel(r) !== null)
+                     .map(r => scoreSignals(r.signals, w));
+  const cuts = new Set([0.05, 0.95]);
+  const sorted = [...new Set(scores)].sort((a,b)=>a-b);
+  sorted.forEach((s,i) => {
+    cuts.add(Math.min(0.95, Math.max(0.05, s)));
+    if (i+1 < sorted.length) cuts.add((s + sorted[i+1]) / 2);
+  });
+  let best = {t: w.confidence_threshold, v: -1};
+  for (const t of cuts){
+    const trial = {...w, confidence_threshold: t};
+    const ev = evaluate(rows, trial);
+    const v = objective(ev, trial, active);
+    if (v > best.v) best = {t, v};
+  }
+  return best;
+}
+
+function autoFit(){
+  const usable = state.rows.filter(r => r.signals && rowLabel(r) !== null);
+  if (usable.length < 4){
+    $("fitNote").textContent = "Need at least 4 labelled runs with raw signals to fit anything.";
+    return;
+  }
+  const labels = new Set(usable.map(rowLabel));
+  if (labels.size < 2){
+    $("fitNote").textContent = "All labelled runs are the same class — nothing to separate.";
+    return;
+  }
+
+  const active = activeSignals(state.rows);
+  if (!active.length){
+    $("fitNote").textContent = "No positive signals have data in this dataset.";
+    return;
+  }
+
+  let best = null;
+  for (let restart = 0; restart < 12; restart++){
+    let w = cloneWeights(state.weights);
+    if (restart > 0){
+      let raw = active.map(() => Math.pow(Math.random(), 1.5));
+      const sum = raw.reduce((a,b)=>a+b, 0) || 1;
+      active.forEach((n,i) => { w.signal_weights[n] = raw[i]/sum; });
+      PENALTY.forEach(n => { w.penalty_weights[n] = -Math.random(); });
+    }
+    let step = 0.25, current = -1;
+    for (let iter = 0; iter < 160; iter++){
+      let improved = false;
+      for (const name of [...active, "__penalty__"]){
+        for (const dir of [1,-1]){
+          const trial = cloneWeights(w);
+          if (name === "__penalty__"){
+            const p = Math.max(0, Math.min(1, Math.abs(trial.penalty_weights[PENALTY[0]]) + dir*step));
+            trial.penalty_weights[PENALTY[0]] = -p;
+          } else {
+            trial.signal_weights[name] = Math.max(0, (trial.signal_weights[name] ?? 0) + dir*step);
+            const total = active.reduce((s,n) => s + (trial.signal_weights[n] ?? 0), 0);
+            if (total <= 0) continue;
+            active.forEach(n => { trial.signal_weights[n] = (trial.signal_weights[n] ?? 0)/total; });
+          }
+          const bt = bestThreshold(state.rows, trial, active);
+          trial.confidence_threshold = bt.t;
+          if (bt.v > current + 1e-9){ current = bt.v; w = trial; improved = true; }
+        }
+      }
+      if (!improved){ step /= 2; if (step < 0.01) break; }
+    }
+    if (!best || current > best.v) best = {v: current, w};
+  }
+
+  const before = evaluate(state.rows, state.weights);
+  state.weights = best.w;
+  state.weights.tier_thresholds = {
+    high: Math.min(0.95, +(best.w.confidence_threshold + 0.15).toFixed(2)),
+    medium: Math.max(0.05, +(best.w.confidence_threshold - 0.10).toFixed(2)),
+  };
+  const after = evaluate(state.rows, state.weights);
+  $("fitNote").innerHTML =
+    `Fitted on ${usable.length} labelled run(s): accuracy ${before.accuracy.toFixed(3)} → ` +
+    `<b>${after.accuracy.toFixed(3)}</b>, f1 ${before.f1.toFixed(3)} → <b>${after.f1.toFixed(3)}</b>. ` +
+    `Fitted signals: ${active.join(", ")}. This is an in-browser fit on the rows loaded here — treat it as a starting point and ` +
+    `confirm with <code>python tune_weights.py fit</code> before committing.`;
+  render(true);
+}
+
+// ---------- export ----------
+function weightsJson(){
+  const w = state.weights;
+  const out = {
+    version: 2,
+    signal_weights: {},
+    penalty_weights: {},
+    confidence_threshold: +w.confidence_threshold.toFixed(4),
+    tier_thresholds: {
+      high: +(w.tier_thresholds?.high ?? 0.85).toFixed(4),
+      medium: +(w.tier_thresholds?.medium ?? 0.6).toFixed(4),
+    },
+    metadata: {
+      source: "dashboard weight playground",
+      exported_at: new Date().toISOString(),
+      dataset: state.label,
+    },
+  };
+  POSITIVE.forEach(n => { out.signal_weights[n] = +(w.signal_weights[n] ?? 0).toFixed(4); });
+  PENALTY.forEach(n => { out.penalty_weights[n] = +(w.penalty_weights[n] ?? 0).toFixed(4); });
+  return JSON.stringify(out, null, 2);
+}
+
+// ---------- data loading ----------
+function normalizeWeights(raw){
+  const w = {
+    signal_weights: {},
+    penalty_weights: {},
+    confidence_threshold: raw.confidence_threshold ?? 0.7,
+    tier_thresholds: raw.tier_thresholds ?? {high: 0.85, medium: 0.6},
+  };
+  const src = raw.signal_weights ?? raw.weights ?? raw;
+  POSITIVE.forEach(n => { w.signal_weights[n] = Number(src[n] ?? 0); });
+  PENALTY.forEach(n => {
+    const v = raw.penalty_weights?.[n] ?? src[n] ?? 0;
+    w.penalty_weights[n] = -Math.abs(Number(v));
+  });
+  return w;
+}
+
+function loadRuns(raw, label){
+  const rows = Array.isArray(raw) ? raw : (raw.runs ?? []);
+  state.rows = rows;
+  state.label = label;
+  if (!Array.isArray(raw) && raw.weights){
+    state.fileWeights = normalizeWeights(raw.weights);
+    state.weights = cloneWeights(state.fileWeights);
+  }
+  render(true);
+}
+
+$("btnBenchmark").addEventListener("click", () => {
+  loadRuns(EMBEDDED_RUNS, `source: embedded benchmark (${EMBEDDED_RUNS.length} runs, local-scoring)`);
+});
+$("btnFixtures").addEventListener("click", () => {
+  loadRuns(EMBEDDED_FIXTURES, `source: config/tuning_fixtures.json (${EMBEDDED_FIXTURES.length} labelled fixtures)`);
+});
+$("btnReset").addEventListener("click", () => {
+  state.weights = cloneWeights(state.fileWeights);
+  $("fitNote").textContent = "";
+  render(true);
+});
+$("btnFit").addEventListener("click", autoFit);
+$("btnExport").addEventListener("click", () => {
+  const box = $("exportBox");
+  const shown = box.style.display !== "none";
+  box.style.display = shown ? "none" : "block";
+  if (!shown){
+    box.textContent = weightsJson();
+    const range = document.createRange();
+    range.selectNodeContents(box);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+});
+$("btnTheme").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+});
+
+function readFile(input, handler){
+  input.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try { handler(JSON.parse(evt.target.result), file.name); }
+      catch (err){ alert("Could not parse that file as JSON: " + err.message); }
+    };
+    reader.readAsText(file);
+  });
+}
+readFile($("resultsInput"), (data, name) => loadRuns(data, `source: ${name}`));
+readFile($("weightsInput"), (data, name) => {
+  state.fileWeights = normalizeWeights(data);
+  state.weights = cloneWeights(state.fileWeights);
+  state.label += ` · weights: ${name}`;
+  render(true);
+});
+
+// boot
+state.fileWeights = normalizeWeights(EMBEDDED_WEIGHTS);
+state.weights = cloneWeights(state.fileWeights);
+loadRuns(EMBEDDED_RUNS, `source: embedded benchmark (${EMBEDDED_RUNS.length} runs, local-scoring)`);
+</script>
+</body>
+</html>

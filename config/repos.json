@@ -1,8 +1,10 @@
 {
   "AdityaShett/dag-failure-agent": {
-    "token_secret": "github-token-personal"
+    "token_secret": "github-token-personal",
+    "dag_path_template": "tests/{dag_id}.py"
   },
   "default": {
-    "token_secret": "github-token-personal"
+    "token_secret": "github-token-personal",
+    "dag_path_template": "tests/{dag_id}.py"
   }
 }

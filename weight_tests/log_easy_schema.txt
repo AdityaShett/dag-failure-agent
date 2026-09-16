@@ -1,0 +1,12 @@
+[2026-09-10 03:12:41,558] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:12:41,559] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): transform_data> on 2026-09-10 03:12:41+00:00
+[2026-09-10 03:12:41,812] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag1.py", line 30, in transform_data
+    user_ids = df["user_id"].tolist()
+  File "/usr/local/lib/python3.11/site-packages/pandas/core/frame.py", line 3893, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "/usr/local/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3798, in get_loc
+    raise KeyError(key) from err
+KeyError: 'user_id'
+[2026-09-10 03:12:41,815] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag1, task_id=transform_data, execution_date=20260910T031241, start_date=20260910T031241, end_date=20260910T031241

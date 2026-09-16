@@ -1,36 +1,32 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+"""
+DAG 5: API / Network Timeout (External)
+Failure mode: the third-party partner API returns HTTP 500 / times out.
+This is NOT something a code change in this repo can fix.
+Expected agent outcome: NO_CONFIDENT_FIX (negative test).
+"""
 from datetime import datetime
 
-# --- BUG (intentional): bucket belongs to a different project than this DAG's
-# service account has storage.objectCreator on ---
-REPORT_BUCKET = "gs://agent-data/"
-
-def extract_reporting_data(**context):
-    context["ti"].xcom_push(key="report_path", value="/tmp/report_2026_08_30.csv")
-
-def write_report_to_gcs(**context):
-    from google.cloud import storage
-    path = context["ti"].xcom_pull(key="report_path", task_ids="extract_reporting_data")
-    client = storage.Client()
-    bucket = client.bucket(REPORT_BUCKET.replace("gs://", "").rstrip("/"))
-    blob = bucket.blob("reports/2026-08-30.csv")
-    blob.upload_from_filename(path)  # raises 403 Forbidden
-
-def archive_source(**context):
-    print("Archiving source extract")
-
-with DAG("dag5", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
-    t1 = PythonOperator(task_id="extract_reporting_data", python_callable=extract_reporting_data)
-    t2 = PythonOperator(task_id="write_report_to_gcs", python_callable=write_report_to_gcs)
-    t3 = PythonOperator(task_id="archive_source", python_callable=archive_source)
-    t1 >> t2 >> t3
-
-# Agent RCA Test
-# DAG: dag5
-# Task: write_report_to_gcs
+import requests
+from airflow import DAG
+from airflow.operators.python import PythonOperator
 
 
-# Agent RCA Test
-# DAG: dag5
-# Task: write_report_to_gcs_hard
+def call_partner_api(**context):
+    response = requests.get(
+        "https://partner-api.example.com/v2/report", timeout=30
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+with DAG(
+    dag_id="dag5",
+    description="API / Network Timeout (External)",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=["benchmark", "external-outage", "negative"],
+) as dag:
+    call_task = PythonOperator(
+        task_id="call_partner_api", python_callable=call_partner_api
+    )

@@ -1,0 +1,4 @@
+[2026-09-10 03:23:59,004] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:23:59,006] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): run_batch_job> on 2026-09-10 03:23:59+00:00
+[2026-09-10 03:24:11,442] {local_task_job_runner.py:266} INFO - Task exited with return code 1
+[2026-09-10 03:24:11,450] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag6, task_id=run_batch_job, execution_date=20260910T032359, start_date=20260910T032359, end_date=20260910T032411

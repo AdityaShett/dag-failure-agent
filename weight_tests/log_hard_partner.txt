@@ -1,6 +1,10 @@
-[2026-08-31 11:15:02] INFO - Task call_partner_api starting for dag6
-[2026-08-31 11:15:09] ERROR - Partner API returned 500 Internal Server Error
-[2026-08-31 11:15:09] ERROR - Response body: {"error":"internal_error","request_id":"a91f-3d2c"}
-[2026-08-31 11:15:09] INFO - No further detail available from partner; their status page shows no reported outage
-[2026-08-31 11:15:10] ERROR - Task failed
-[2026-08-31 11:15:11] INFO - Same endpoint succeeded on retry 40 minutes later with no code or config changes in between
+[2026-09-10 03:20:44,110] {taskinstance.py:1937} INFO - Starting attempt 1 of 1
+[2026-09-10 03:20:44,112] {taskinstance.py:2170} INFO - Executing <Task(PythonOperator): call_partner_api> on 2026-09-10 03:20:44+00:00
+[2026-09-10 03:21:14,890] {python.py:194} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/tests/dag5.py", line 18, in call_partner_api
+    response.raise_for_status()
+  File "/usr/local/lib/python3.11/site-packages/requests/models.py", line 1024, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://partner-api.example.com/v2/report
+[2026-09-10 03:21:14,895] {taskinstance.py:2731} INFO - Marking task as FAILED. dag_id=dag5, task_id=call_partner_api, execution_date=20260910T032044, start_date=20260910T032044, end_date=20260910T032114
