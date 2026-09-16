@@ -15,7 +15,13 @@ def parse_response(**context):
 def store_result(**context):
     print("Storing reconciliation result")
 
+def dummy_run_batch_job():
+    """Placeholder function for the missing run_batch_job task."""
+    print("Executing placeholder for run_batch_job")
+
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job",
 
 
 # Agent RCA Test
