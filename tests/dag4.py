@@ -8,7 +8,7 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from utils.metrics_helper import compute_engagement_score
+from lib.metrics import compute_engagement_score
 
 
 def score_engagement(**context):
