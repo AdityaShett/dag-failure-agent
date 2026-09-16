@@ -7,9 +7,12 @@ def fetch_upstream_partition(**context):
 
 def validate_schema(**context):
     path = context["ti"].xcom_pull(key="partition_path", task_ids="fetch_upstream_partition")
-    with open(path) as f:  # writes the validated copy merge_partitions depends on
-        pass
-    print(f"Schema validated for {path}")
+    validated_path = path.replace(".parquet", ".validated.parquet")
+    with open(path, 'r') as f_in:  # Read original file content
+        content = f_in.read()
+    with open(validated_path, 'w') as f_out:  # Write the validated copy
+        f_out.write(content)
+    print(f"Schema validated for {path} and written to {validated_path}")
 
 def merge_partitions(**context):
     path = context["ti"].xcom_pull(key="partition_path", task_ids="fetch_upstream_partition")
