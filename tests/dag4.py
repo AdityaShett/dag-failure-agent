@@ -10,12 +10,11 @@ def fetch_customer_profile(**context):
 def enrich_with_scores(**context):
     profile = context["ti"].xcom_pull(key="profile", task_ids="fetch_customer_profile")
     # --- BUG (intentional): assumes preferences is always a dict, never checks for None ---
-    if profile["preferences"] and "marketing_opt_in" in profile["preferences"]:
-        profile["scores"]["marketing_eligible"] = True
+    is_marketing_eligible = bool(profile["preferences"] and "marketing_opt_in" in profile["preferences"])
+    profile["scores"]["marketing_eligible"] = is_marketing_eligible
     context["ti"].xcom_push(key="enriched", value=profile)
 
-def flag_high_risk(**context):
-    print("Flagging high-risk customers")
+def flag_high_risk(**context):    print("Flagging high-risk customers")
 
 with DAG("dag4", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
     t1 = PythonOperator(task_id="fetch_customer_profile", python_callable=fetch_customer_profile)
