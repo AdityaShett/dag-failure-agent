@@ -8,12 +8,10 @@ def extract_source_data(**context):
     context["ti"].xcom_push(key="raw_path", value="gs://raw/customer_events/2026-08-30/")
 
 def load_dataset(**context):
-    # --- BUG (intentional): mistyped dictionary key ---
-    dataset_name = CONFIG["dataset"]  # should be CONFIG["dataset"]
+    dataset_name = CONFIG["dataset"]
     print(f"Loading dataset: {dataset_name} ({CONFIG['format']}) from {CONFIG['region']}")
 
-def transform_dataset(**context):
-    print("Applying schema normalization")
+def transform_dataset(**context):    print("Applying schema normalization")
 
 def aggregate_regions(**context):
     print("Aggregating by region")
