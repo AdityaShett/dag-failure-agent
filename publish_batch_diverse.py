@@ -54,13 +54,26 @@ def make_run_id(scenario_id: str) -> str:
     return f"run-{scenario_id}-{timestamp}-{short_uuid}"
 
 
-def build_payload(scenario: dict, run_id: str, github_repo: str) -> dict:
+def load_log_contents(log_file: str, weight_tests_dir: str) -> str:
+    log_path = Path(weight_tests_dir) / log_file
+    with open(log_path, "r") as f:
+        return f.read()
+
+
+def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_dir: str) -> dict:
     return {
         "run_id": run_id,
         "github_repo": github_repo,
         "dag_id": scenario["dag_id"],
         "task_id": scenario["task_id"],
-        "code_file": scenario["code_file"],
+        # processor_app.py resolves the DAG source path itself via
+        # _resolve_target_file() when target_file is absent, but we pass
+        # it explicitly since we already know it from scenarios.json.
+        "target_file": scenario["code_file"],
+        # processor_app.py reads this exact key and passes it straight
+        # into the LangGraph state as "synthetic_task_logs" — collect_context
+        # only skips the real fetch_task_logs() call when this is non-None.
+        "synthetic_task_logs": load_log_contents(scenario["log_file"], weight_tests_dir),
         "log_file": scenario["log_file"],
         "scenario_id": scenario["scenario_id"],
         "difficulty": scenario.get("difficulty"),
@@ -84,6 +97,11 @@ def main():
         "--scenarios",
         default="config/scenarios.json",
         help="Path to scenarios.json",
+    )
+    parser.add_argument(
+        "--weight-tests-dir",
+        default="weight_tests",
+        help="Directory containing the log_*.txt files referenced by scenarios.json",
     )
     parser.add_argument(
         "--delay-seconds",
@@ -125,7 +143,7 @@ def main():
     for scenario in scenarios:
         for repeat_index in range(repeats):
             run_id = make_run_id(scenario["scenario_id"])
-            payload = build_payload(scenario, run_id, github_repo)
+            payload = build_payload(scenario, run_id, github_repo, args.weight_tests_dir)
             count += 1
 
             log.info(
