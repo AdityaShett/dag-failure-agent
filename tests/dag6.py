@@ -16,6 +16,10 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    call_api_task = PythonOperator(
+        task_id="call_partner_api_hard",
+        python_callable=call_partner_api,
+with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
 
 
 # Agent RCA Test
