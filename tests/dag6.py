@@ -16,6 +16,11 @@ def store_result(**context):
     print("Storing reconciliation result")
 
 with DAG("dag6", start_date=datetime(2026, 1, 1), schedule=None, catchup=False) as dag:
+    # The task 'run_batch_job' was reported in logs but not defined in the DAG code.
+    # Based on the context and the intentional bug description in 'call_partner_api',
+    # it is assumed 'run_batch_job' is intended to execute 'call_partner_api'.
+    run_batch_job = PythonOperator(
+        task_id="run_batch_job", python_callable=call_partner_api
 
 
 # Agent RCA Test
