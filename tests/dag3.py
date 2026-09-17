@@ -18,8 +18,9 @@ def clean_records(**context):
     ]
     normalized = []
     for record in records:
-        normalized_email = record["email"].lower()
-        normalized.append(normalized_email)
+        if record["email"] is not None:
+            normalized_email = record["email"].lower()
+            normalized.append(normalized_email)
     print(f"Normalized {len(normalized)} emails")
 
 
