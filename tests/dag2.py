@@ -34,5 +34,5 @@ with DAG(
     read_task = PythonOperator(
         task_id="read_partition",
         python_callable=read_partition,
-        op_kwargs={"ds": "{{ ds }}"},
+        op_kwargs={"ds": "{{ ds_nodash }}"},
     )
