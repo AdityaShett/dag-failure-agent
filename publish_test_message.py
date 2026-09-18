@@ -20,17 +20,13 @@ def publish_message(args):
         "github_repo": args.github_repo,
     }
 
-    # Clean out empty/None values
     payload = {k: v for k, v in payload.items() if v is not None}
 
     publisher_client = pubsub_v1.PublisherClient()
     topic_path = publisher_client.topic_path(PROJECT_ID, TOPIC_ID)
-
-    # Encode strictly as valid JSON bytes
     data = json.dumps(payload).encode("utf-8")
     future = publisher_client.publish(topic_path, data)
-    
-    # Enforce timeout to prevent silent gRPC hangs
+
     print(f"Published message ID: {future.result(timeout=30)}")
 
 if __name__ == "__main__":

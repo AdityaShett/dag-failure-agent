@@ -1,42 +1,4 @@
-#!/usr/bin/env python3
-"""
-tune_weights.py -- the one weight tuner.
 
-Replaces tune_weights.py (old), tune_weights_v2.py, tune_weights_3signal.py
-and score_manual_weights.py. Those disagreed with each other about how many
-signals there were, what shape weights.json should be, and whether the
-threshold was tunable -- and none of them wrote a file that
-processor/agent/nodes.py could actually read.
-
-Three things it does:
-
-  score   Score a specific set of weights against labeled data and print the
-          confusion matrix (what score_manual_weights.py did).
-  fit     Search for the weights + threshold that maximise an objective,
-          with k-fold cross-validation (what tune_weights_3signal.py tried
-          to do), and optionally write config/weights.json.
-  compare Score the current config/weights.json against a fitted candidate
-          side by side, so you can see what you'd be trading away.
-
-Data sources:
-
-  --source fixtures   config/tuning_fixtures.json + the local logs/DAGs.
-                      Works offline, no GCP. This is the one to use until
-                      there are enough human-labeled PR outcomes.
-  --source results    a results.json produced by run_benchmark_local.py or
-                      export_results.py (uses expected_outcome as the label).
-  --source bigquery   confidence_signals joined to the latest
-                      confidence_outcomes row per record_id; label is
-                      merged=1 / rejected=0. Needs the 001 migration applied
-                      and enough labeled PRs.
-
-Usage:
-    python tune_weights.py score
-    python tune_weights.py fit --objective f1
-    python tune_weights.py fit --apply
-    python tune_weights.py fit --source bigquery --min-per-class 5
-    python tune_weights.py compare
-"""
 from __future__ import annotations
 
 import argparse
@@ -58,10 +20,6 @@ DEFAULT_FIXTURES_PATH = "config/tuning_fixtures.json"
 POSITIVE = list(confidence.POSITIVE_SIGNALS)
 PENALTY = list(confidence.PENALTY_SIGNALS)
 
-
-# --------------------------------------------------------------------------
-# Data loading -- every source returns [{"id", "signals", "label", "group"}]
-# --------------------------------------------------------------------------
 
 def load_from_fixtures(fixtures_path: str, weight_tests_dir: str,
                        repo_root: str) -> List[dict]:
@@ -163,10 +121,6 @@ def load_from_bigquery(project: str, dataset: str) -> List[dict]:
     return rows
 
 
-# --------------------------------------------------------------------------
-# Metrics
-# --------------------------------------------------------------------------
-
 def build_cfg(positive: Dict[str, float], penalty: Dict[str, float],
               threshold: float, tiers: Optional[dict] = None) -> dict:
     return {
@@ -215,11 +169,7 @@ def metrics(rows: List[dict], scores: List[float], threshold: float) -> dict:
 
 
 def separation(rows: List[dict], scores: List[float], threshold: float) -> float:
-    """How much room the decision has. Two weightings can both get every
-    fixture right while one of them squeaks past by 0.001; this is the
-    tie-breaker that prefers the one with daylight around the threshold.
-    Returns the smaller of (gap below the threshold, gap above it), so a
-    cut that sits right on top of a data point scores 0."""
+
     if not scores:
         return 0.0
     below = [threshold - s for s in scores if s < threshold]
@@ -233,20 +183,12 @@ def objective_value(m: dict, objective: str) -> float:
     if objective == "balanced_accuracy":
         return m["balanced_accuracy"]
     if objective == "precision":
-        # Precision alone is trivially maximised by predicting nothing, so
-        # break ties toward keeping some recall.
         return m["precision"] + 0.01 * m["recall"]
     return m["f1"]
 
 
-# --------------------------------------------------------------------------
-# Fitting
-# --------------------------------------------------------------------------
-
 def best_threshold(rows: List[dict], scores: List[float], objective: str,
                    lo: float = 0.05, hi: float = 0.95) -> tuple:
-    """Sweeps every threshold that could change a decision (the midpoints
-    between adjacent observed scores) rather than an arbitrary grid."""
     candidates = sorted({round(s, 4) for s in scores})
     cuts = [lo, hi]
     for i, s in enumerate(candidates):
@@ -256,9 +198,6 @@ def best_threshold(rows: List[dict], scores: List[float], objective: str,
     best = (None, -1.0, None)
     for t in sorted(set(round(c, 4) for c in cuts)):
         m = metrics(rows, scores, t)
-        # Tie-break on separation so a fit that only wins by a rounding
-        # error doesn't beat one with real margin. The coefficient is small
-        # enough that it can never outrank an actual accuracy difference.
         v = objective_value(m, objective) + 0.01 * separation(rows, scores, t)
         if v > best[1]:
             best = (t, v, m)
@@ -272,16 +211,7 @@ def random_weights(rng: random.Random, names: List[str]) -> Dict[str, float]:
 
 
 def concentration_penalty(weights: Dict[str, float]) -> float:
-    """Distance from an even split across the active signals.
 
-    With a fixture set this small, an unregularised search reliably
-    collapses onto a single signal (it can separate 17 rows with
-    line_number_matches_source alone and nothing else). That scores
-    perfectly here and is brittle everywhere else -- one signal extraction
-    bug and the agent has no second opinion. This term prices that in, so a
-    concentrated solution has to actually beat a balanced one on the data
-    rather than merely tie it.
-    """
     if not weights:
         return 0.0
     even = 1.0 / len(weights)
@@ -292,12 +222,6 @@ def fit(rows: List[dict], objective: str = "f1", restarts: int = 40,
         iterations: int = 250, seed: int = 42,
         fixed_penalty: Optional[float] = None,
         regularization: float = 0.08) -> dict:
-    """Random-restart coordinate search over the weight simplex plus the
-    penalty magnitude, with the threshold chosen optimally for each
-    candidate. Pure stdlib on purpose: this has to be runnable in the same
-    container as the worker, and scipy/sklearn were only ever used here for
-    a 3-variable search.
-    """
     rng = random.Random(seed)
     active = [n for n in POSITIVE
               if any(r["signals"].get(n) is not None for r in rows)]
@@ -393,10 +317,6 @@ def cross_validate(rows: List[dict], objective: str, k: int = 5,
     return {"mean": mean, "std": var ** 0.5, "folds": len(values)}
 
 
-# --------------------------------------------------------------------------
-# Reporting
-# --------------------------------------------------------------------------
-
 def print_report(rows: List[dict], cfg: dict, title: str, per_row: bool = True) -> dict:
     scores = score_rows(rows, cfg)
     threshold = cfg["confidence_threshold"]
@@ -431,8 +351,6 @@ def sanity_check(rows: List[dict]) -> None:
     if n_pos == 0 or n_neg == 0:
         raise SystemExit("ERROR: need both classes present to tune anything.")
 
-    # If a signal never varies it cannot contribute to a decision, and any
-    # weight assigned to it is noise. Say so rather than fitting it anyway.
     for name in POSITIVE + PENALTY:
         values = {r["signals"].get(name) for r in rows}
         values.discard(None)
@@ -515,8 +433,6 @@ def main() -> int:
                        {"external_dependency_detected": -result["penalty"]},
                        result["threshold"])
 
-    # Signals with no data in this dataset keep whatever they had, so fitting
-    # on a dataset that happens to lack history never silently zeroes it.
     for name, weight in current["signal_weights"].items():
         if name not in fitted["signal_weights"]:
             fitted["signal_weights"][name] = weight

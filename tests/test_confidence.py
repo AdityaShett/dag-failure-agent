@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
 tests/test_confidence.py -- run with:  python -m pytest tests/test_confidence.py -q
-                            or simply: python tests/test_confidence.py
 
-No GCP, no network, no LLM. These lock in the behaviours that were actually
-broken, so a regression shows up here rather than as a mystery PR in GitHub.
 """
 import json
 import sys

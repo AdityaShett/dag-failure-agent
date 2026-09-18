@@ -1,0 +1,16 @@
+{
+    "github_repo":  "AdityaShett/dag-failure-agent",
+    "repeats_per_scenario":  1,
+    "scenarios":  [
+                      {
+                          "scenario_id":  "schema_drift_dag1",
+                          "difficulty":  "easy",
+                          "dag_id":  "dag1",
+                          "task_id":  "transform_data",
+                          "code_file":  "tests/dag1.py",
+                          "log_file":  "log_easy_schema.txt",
+                          "failure_type":  "KeyError",
+                          "expected_outcome":  "PR_CREATED"
+                      }
+                  ]
+}

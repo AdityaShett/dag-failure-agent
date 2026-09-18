@@ -1,8 +1,6 @@
 """
 DAG 5: API / Network Timeout (External)
-Failure mode: the third-party partner API returns HTTP 500 / times out.
-This is NOT something a code change in this repo can fix.
-Expected agent outcome: NO_CONFIDENT_FIX (negative test).
+
 """
 from datetime import datetime
 

@@ -1,8 +1,6 @@
 """
 DAG 4: Import / Dependency Missing
-Failure mode: ModuleNotFoundError caused by importing from a module path
-that was moved during a repo refactor (utils.metrics_helper -> lib.metrics).
-Expected agent outcome: PR_CREATED (medium confidence fix).
+
 """
 from datetime import datetime
 

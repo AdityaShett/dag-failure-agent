@@ -1,25 +1,4 @@
-#!/usr/bin/env python3
-"""
-export_results.py
 
-Builds results/results.json -- the file dashboard.html loads -- from whatever
-real sources are available:
-
-  gcs       the per-run objects results_log.py writes (gs://$OUTCOMES_BUCKET/results/*.json)
-  bigquery  confidence_signals joined to the latest confidence_outcomes row
-  manifest  results/run_manifest.json, to fill in scenario metadata and to
-            show published runs that never produced a result at all
-
-The manifest join is the useful part: a run that was published but has no
-result row is a run that vanished (crashed, was nacked, or was deduped), and
-that used to be invisible. Those come through with actual_outcome="NO_RESULT"
-so the dashboard's "unexpected outcome" counter catches them.
-
-Usage:
-    python export_results.py                        # gcs + manifest
-    python export_results.py --source bigquery
-    python export_results.py --source all --out results/results.json
-"""
 from __future__ import annotations
 
 import argparse
@@ -38,8 +17,6 @@ def load_manifest(path: str) -> dict:
     out = {}
     for row in rows:
         if row.get("run_id"):
-            # The manifest carries the whole log body; drop it, it's large
-            # and the dashboard has no use for it.
             out[row["run_id"]] = {k: v for k, v in row.items()
                                   if k != "synthetic_task_logs"}
     return out
@@ -114,8 +91,6 @@ def load_from_bigquery(project: str, dataset: str, limit: int = 500) -> list:
 
 
 def merge(rows: list, manifest: dict, github_repo: str) -> list:
-    """Manifest fields fill gaps in a result row; they never overwrite
-    something the agent actually reported."""
     merged = []
     seen = set()
     for row in rows:

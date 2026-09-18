@@ -1,13 +1,3 @@
-"""
-Streamlit dashboard -- the live view over BigQuery.
-
-Relationship to dashboard.html: the HTML file is the self-contained
-benchmark + weight-tuning view you can open from disk with no credentials
-(and the one to use while iterating on weights). This one is the deployed
-service that reads what the agent has actually been doing in production.
-They share the scoring formula via processor/agent/confidence.py, so a
-weight change previewed in one behaves identically in the other.
-"""
 
 import json
 import os
@@ -56,9 +46,6 @@ def safe_query(query: str, empty_msg: str) -> Optional[pd.DataFrame]:
 
 @st.cache_data(ttl=60)
 def load_scored_runs(limit: int = 300) -> Optional[pd.DataFrame]:
-    # confidence_outcomes is append-only, so one record_id can have an
-    # "opened" row and a later "merged"/"rejected" row. Always take the
-    # latest row per record_id before joining.
     signal_select = ",\n            ".join(f"s.{c}" for c in SIGNAL_COLUMNS.values())
     query = f"""
         WITH latest_outcome AS (
@@ -108,7 +95,6 @@ weights = load_weights()
 
 tab_overview, tab_runs, tab_weights = st.tabs(["Overview", "Runs", "Weights"])
 
-# ---------------------------------------------------------------- Overview
 with tab_overview:
     c1, c2, c3, c4, c5 = st.columns(5)
     if df is not None:
@@ -149,7 +135,6 @@ with tab_overview:
         history["dag_task"] = history["dag_id"] + " / " + history["task_id"]
         st.bar_chart(history.set_index("dag_task")["count"])
 
-# -------------------------------------------------------------------- Runs
 with tab_runs:
     if df is None:
         st.info("Nothing to show yet.")
@@ -176,7 +161,6 @@ with tab_runs:
                     "redeploy the processor -- rows written before that only carry "
                     "the old degenerate s_logs/s_source columns.")
 
-# ----------------------------------------------------------------- Weights
 with tab_weights:
     st.subheader("Live weights")
     st.caption(f"Loaded from `{WEIGHTS_PATH}`. Editing here previews only — copy the "

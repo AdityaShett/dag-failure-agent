@@ -1,30 +1,4 @@
-#!/usr/bin/env python3
-"""
-publish_batch_diverse.py
 
-Reads config/scenarios.json and publishes one Pub/Sub message per scenario
-to trigger the dag-failure-agent Cloud Run worker.
-
-Fixes vs. the old script:
-  - Every published message gets a unique run_id (scenario_id + UTC
-    timestamp + short uuid), so the worker can never collide on a branch
-    name or dedupe key across runs.
-  - A configurable delay is inserted between publishes (default 5s) so the
-    Cloud Run service has time to scale/process before the next event
-    lands, avoiding the collision spikes seen when firing 4 repeats every
-    2 seconds.
-  - Clear, structured logging of exactly what was published, so a batch
-    run can be audited scenario-by-scenario.
-  - Writes a local results/run_manifest.json recording every run_id that
-    was published, for the dashboard to join against agent outcomes.
-
-Usage:
-    python publish_batch_diverse.py \\
-        --project my-gcp-project \\
-        --topic dag-failure-events \\
-        --scenarios config/scenarios.json \\
-        --delay-seconds 5
-"""
 import argparse
 import json
 import logging
@@ -67,22 +41,13 @@ def build_payload(scenario: dict, run_id: str, github_repo: str, weight_tests_di
         "github_repo": github_repo,
         "dag_id": scenario["dag_id"],
         "task_id": scenario["task_id"],
-        # processor_app.py resolves the DAG source path itself via
-        # _resolve_target_file() when target_file is absent, but we pass
-        # it explicitly since we already know it from scenarios.json.
         "target_file": scenario["code_file"],
-        # processor_app.py reads this exact key and passes it straight
-        # into the LangGraph state as "synthetic_task_logs" — collect_context
-        # only skips the real fetch_task_logs() call when this is non-None.
         "synthetic_task_logs": load_log_contents(scenario["log_file"], weight_tests_dir),
         "log_file": scenario["log_file"],
         "scenario_id": scenario["scenario_id"],
         "difficulty": scenario.get("difficulty"),
         "failure_type": scenario.get("failure_type"),
         "expected_outcome": scenario.get("expected_outcome"),
-        # Pins the worker's fetch_dag_source to a specific ref for this run.
-        # Without it the worker reads the repo's DEFAULT branch, which is how
-        # logs for the new DAGs ended up being analysed against the old ones.
         "source_ref": source_ref,
         "branch_name": f"agent/fix-{scenario['dag_id']}-{run_id}",
     }
@@ -141,7 +106,7 @@ def main():
     publisher = None
     topic_path = None
     if not args.dry_run:
-        from google.cloud import pubsub_v1  # imported lazily so --dry-run needs no GCP libs
+        from google.cloud import pubsub_v1
 
         publisher = pubsub_v1.PublisherClient()
         topic_path = publisher.topic_path(args.project, args.topic)
@@ -177,8 +142,6 @@ def main():
             if count < total:
                 time.sleep(args.delay_seconds)
 
-    # The manifest is what export_results.py joins against, so keeping the
-    # log body out of it keeps that file readable.
     manifest_path = Path(args.manifest_out)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with open(manifest_path, "w") as f:

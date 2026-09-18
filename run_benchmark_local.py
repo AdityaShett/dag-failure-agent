@@ -1,29 +1,4 @@
-#!/usr/bin/env python3
-"""
-run_benchmark_local.py
 
-Scores every scenario in config/scenarios.json using the *same* signal
-extraction and weighting the Cloud Run worker uses
-(processor/agent/confidence.py), and writes results/results.json.
-
-Why this exists: until now the only way to find out whether a weight change
-helped was to publish 6 Pub/Sub messages, wait for Cloud Run, wait for
-Gemini, and read PR titles. That loop is minutes long, costs money, and
-mixes up three different failure modes (publisher bug, stale source, bad
-weights). This runs the confidence half of the pipeline in about 50ms with
-no GCP credentials, so weight tuning is a tight loop again.
-
-What it does NOT do: call the LLM or open PRs. It reports what the
-confidence gate would decide -- PR_CREATED if score >= confidence_threshold,
-NO_CONFIDENT_FIX otherwise -- which is exactly the decision the weights
-control. Every row it writes is tagged mode="local-scoring" so it can never
-be mistaken for a real end-to-end run in the dashboard.
-
-Usage:
-    python run_benchmark_local.py
-    python run_benchmark_local.py --weights config/weights.json --out results/results.json
-    python run_benchmark_local.py --source-from-github --ref test/verify-secret-fix
-"""
 from __future__ import annotations
 
 import argparse
@@ -35,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "processor"))
 
-from agent import confidence  # noqa: E402
+from agent import confidence # noqa: E402
 
 
 def read_text(path: Path) -> str:
@@ -51,10 +26,7 @@ def load_source_local(code_file: str, repo_root: Path) -> str:
 
 
 def load_source_github(code_file: str, repo: str, ref: str) -> str:
-    """Mirrors what the worker's fetch_dag_source does, so a local benchmark
-    can reproduce the 'worker is reading main, publisher is sending the
-    feature branch' mismatch instead of hiding it."""
-    from github import Auth, Github  # imported lazily: only needed with --source-from-github
+    from github import Auth, Github
 
     token = os.environ.get("GITHUB_TOKEN")
     gh = Github(auth=Auth.Token(token)) if token else Github()

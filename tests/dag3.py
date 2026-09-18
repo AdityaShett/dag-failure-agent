@@ -1,8 +1,6 @@
 """
 DAG 3: Data Quality / Null Handling
-Failure mode: AttributeError from calling a string method on a None value
-that was not filtered out upstream.
-Expected agent outcome: PR_CREATED (medium confidence fix).
+
 """
 from datetime import datetime
 

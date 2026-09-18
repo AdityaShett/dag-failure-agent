@@ -1,0 +1,163 @@
+{
+  "generated_at": "2026-09-16T23:59:22.190019+00:00",
+  "mode": "agent-run",
+  "source": "all",
+  "weights": {
+    "version": 2,
+    "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold. Edit by hand, or regenerate with `python tune_weights.py`.",
+    "signal_weights": {
+      "stack_trace_present": 0.24,
+      "line_number_matches_source": 0.34,
+      "known_fix_pattern_match": 0.24,
+      "log_completeness": 0.06,
+      "history_merge_rate": 0.07,
+      "retrieval_support": 0.05
+    },
+    "penalty_weights": {
+      "external_dependency_detected": -0.4
+    },
+    "confidence_threshold": 0.7,
+    "tier_thresholds": {
+      "high": 0.85,
+      "medium": 0.6
+    },
+    "notes": {
+      "stack_trace_present": "1.0 for a full traceback with an exception line; 0.8 frames but no 'Traceback' header; 0.4 exception line only; 0.0 nothing (dag6).",
+      "line_number_matches_source": "1.0 the failing line of code is where the traceback says it is; 0.6 it exists elsewhere in the file; 0.25 only the function matches; 0.0 the code isn't in this file at all. This is the guard that catches a stale or wrong DAG source being analysed against a fresh log.",
+      "known_fix_pattern_match": "1.0 if the exception type is in confidence.KNOWN_FIX_PATTERNS (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError, ...).",
+      "log_completeness": "Fraction of six checks: timestamps, level markers, >=4 lines, task_id present, dag_id present, >=200 chars.",
+      "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. Omitted (not guessed) when there is no history.",
+      "retrieval_support": "OPTIONAL. min(1, similar prior incidents found / 5).",
+      "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage (dag5). Subtracted from the weighted mean so an otherwise-perfect log still lands below threshold, because no change to this repo fixes it."
+    },
+    "metadata": {
+      "source": "hand-tuned, validated against config/tuning_fixtures.json (17 rows) with `python tune_weights.py score`",
+      "measured": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "n_samples": 17,
+        "n_positive": 4
+      },
+      "margin": "nearest negative scores 0.614 against a 0.70 threshold; nearest positive scores 1.000",
+      "note": "Regenerate with `python tune_weights.py fit --apply` once BigQuery has >=5 human-labeled PR outcomes per class; that overwrites this block with fitted values and their cross-validated accuracy."
+    }
+  },
+  "runs": [
+    {
+      "run_id": "run-schema_drift_dag1-20260916T234453Z-d2b29c76",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag1",
+      "task_id": "transform_data",
+      "target_file": "tests/dag1.py",
+      "log_file": "log_easy_schema.txt",
+      "scenario_id": "schema_drift_dag1",
+      "difficulty": "easy",
+      "failure_type": "KeyError",
+      "expected_outcome": "PR_CREATED",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag1-run-schema_drift_dag1-20260916T234453Z-d2b29c76",
+      "message_id": "21214415344897120",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    },
+    {
+      "run_id": "run-macro_mismatch_dag2-20260916T234459Z-d3668091",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag2",
+      "task_id": "read_partition",
+      "target_file": "tests/dag2.py",
+      "log_file": "log_easy_partition.txt",
+      "scenario_id": "macro_mismatch_dag2",
+      "difficulty": "easy",
+      "failure_type": "FileNotFoundError",
+      "expected_outcome": "PR_CREATED",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag2-run-macro_mismatch_dag2-20260916T234459Z-d3668091",
+      "message_id": "21214554155526145",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    },
+    {
+      "run_id": "run-null_handling_dag3-20260916T234504Z-a69b95e6",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag3",
+      "task_id": "clean_records",
+      "target_file": "tests/dag3.py",
+      "log_file": "log_medium_null.txt",
+      "scenario_id": "null_handling_dag3",
+      "difficulty": "medium",
+      "failure_type": "AttributeError",
+      "expected_outcome": "PR_CREATED",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag3-run-null_handling_dag3-20260916T234504Z-a69b95e6",
+      "message_id": "21214412034801895",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    },
+    {
+      "run_id": "run-missing_import_dag4-20260916T234509Z-b3ec0cd2",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag4",
+      "task_id": "score_engagement",
+      "target_file": "tests/dag4.py",
+      "log_file": "log_medium_import.txt",
+      "scenario_id": "missing_import_dag4",
+      "difficulty": "medium",
+      "failure_type": "ModuleNotFoundError",
+      "expected_outcome": "PR_CREATED",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag4-run-missing_import_dag4-20260916T234509Z-b3ec0cd2",
+      "message_id": "21214435656881093",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    },
+    {
+      "run_id": "run-partner_outage_dag5-20260916T234514Z-2704c8b8",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag5",
+      "task_id": "call_partner_api",
+      "target_file": "tests/dag5.py",
+      "log_file": "log_hard_partner.txt",
+      "scenario_id": "partner_outage_dag5",
+      "difficulty": "hard",
+      "failure_type": "HTTPError_500_external",
+      "expected_outcome": "NO_CONFIDENT_FIX",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag5-run-partner_outage_dag5-20260916T234514Z-2704c8b8",
+      "message_id": "21214733345069752",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    },
+    {
+      "run_id": "run-ambiguous_log_dag6-20260916T234519Z-6ce3fabd",
+      "github_repo": "AdityaShett/dag-failure-agent",
+      "dag_id": "dag6",
+      "task_id": "run_batch_job",
+      "target_file": "tests/dag6.py",
+      "log_file": "log_hard_ambiguous.txt",
+      "scenario_id": "ambiguous_log_dag6",
+      "difficulty": "hard",
+      "failure_type": "no_stack_trace",
+      "expected_outcome": "NO_CONFIDENT_FIX",
+      "source_ref": null,
+      "branch_name": "agent/fix-dag6-run-ambiguous_log_dag6-20260916T234519Z-6ce3fabd",
+      "message_id": "21214538556317350",
+      "actual_outcome": "NO_RESULT",
+      "confidence_score": null,
+      "mode": "published-no-result",
+      "note": "published to Pub/Sub but no result row was ever written (worker crash, dedupe skip, or message never delivered)"
+    }
+  ]
+}

@@ -1,8 +1,6 @@
 """
 DAG 1: Schema / Column Drift
-Failure mode: KeyError caused by an upstream schema change (a column was
-renamed before this task's transform logic runs).
-Expected agent outcome: PR_CREATED (easy / high-confidence fix).
+
 """
 from datetime import datetime
 
@@ -12,9 +10,7 @@ from airflow.operators.python import PythonOperator
 
 
 def load_dataset(**context):
-    # Upstream extract step. In production this reads from a warehouse
-    # table; here it simulates the schema drift: the source system
-    # renamed "user_id" -> "uid" but this DAG was not updated.
+
     data = {
         "uid": [101, 102, 103],
         "event_type": ["click", "view", "purchase"],

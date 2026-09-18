@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold. Edit by hand, or regenerate with `python tune_weights.py`.",
+  "_comment": "Canonical confidence-weights config. Read by processor/agent/confidence.py (which nodes.py, run_benchmark_local.py and tune_weights.py all share). Positive signals are combined as a weighted mean over the signals available on a given run; penalty weights are then subtracted outright. A run only opens a PR if the final score >= confidence_threshold.",
   "signal_weights": {
     "stack_trace_present": 0.24,
     "line_number_matches_source": 0.34,
@@ -22,9 +22,9 @@
     "line_number_matches_source": "1.0 the failing line of code is where the traceback says it is; 0.6 it exists elsewhere in the file; 0.25 only the function matches; 0.0 the code isn't in this file at all. This is the guard that catches a stale or wrong DAG source being analysed against a fresh log.",
     "known_fix_pattern_match": "1.0 if the exception type is in confidence.KNOWN_FIX_PATTERNS (KeyError, FileNotFoundError, AttributeError, ModuleNotFoundError, ...).",
     "log_completeness": "Fraction of six checks: timestamps, level markers, >=4 lines, task_id present, dag_id present, >=200 chars.",
-    "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. Omitted (not guessed) when there is no history.",
+    "history_merge_rate": "OPTIONAL. Share of past agent PRs for this dag+task that a human merged. ",
     "retrieval_support": "OPTIONAL. min(1, similar prior incidents found / 5).",
-    "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage (dag5). Subtracted from the weighted mean so an otherwise-perfect log still lands below threshold, because no change to this repo fixes it."
+    "external_dependency_detected": "PENALTY. 1.0 when the failure bottoms out in a third-party call or outage ."
   },
   "metadata": {
     "source": "hand-tuned, validated against config/tuning_fixtures.json (17 rows) with `python tune_weights.py score`",

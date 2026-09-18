@@ -1,8 +1,6 @@
 """
 DAG 2: Partition / Macro Syntax
-Failure mode: FileNotFoundError caused by using the wrong Airflow date
-macro when building a partition path ("{{ ds }}" vs "{{ ds_nodash }}").
-Expected agent outcome: PR_CREATED (easy / high-confidence fix).
+
 """
 import os
 from datetime import datetime
@@ -12,8 +10,7 @@ from airflow.operators.python import PythonOperator
 
 
 def read_partition(ds, **context):
-    # Upstream job writes partitions named with the *nodash* date format,
-    # e.g. /data/warehouse/events/dt=20240115/part-00000.csv
+
     partition_path = f"/data/warehouse/events/dt={ds}/part-00000.csv"
     if not os.path.exists(partition_path):
         raise FileNotFoundError(

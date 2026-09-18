@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-16T17:46:28.645468+00:00",
+  "generated_at": "2026-09-16T20:44:28.435302+00:00",
   "mode": "local-scoring",
   "weights": {
     "version": 2,
@@ -45,7 +45,7 @@
   },
   "runs": [
     {
-      "run_id": "local-schema_drift_dag1-20260916T174628Z",
+      "run_id": "local-schema_drift_dag1-20260916T204428Z",
       "scenario_id": "schema_drift_dag1",
       "dag_id": "dag1",
       "task_id": "transform_data",
@@ -73,10 +73,10 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.625917+00:00"
+      "timestamp": "2026-09-16T20:44:28.214151+00:00"
     },
     {
-      "run_id": "local-macro_mismatch_dag2-20260916T174628Z",
+      "run_id": "local-macro_mismatch_dag2-20260916T204428Z",
       "scenario_id": "macro_mismatch_dag2",
       "dag_id": "dag2",
       "task_id": "read_partition",
@@ -104,10 +104,10 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+      "timestamp": "2026-09-16T20:44:28.288533+00:00"
     },
     {
-      "run_id": "local-null_handling_dag3-20260916T174628Z",
+      "run_id": "local-null_handling_dag3-20260916T204428Z",
       "scenario_id": "null_handling_dag3",
       "dag_id": "dag3",
       "task_id": "clean_records",
@@ -135,10 +135,10 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+      "timestamp": "2026-09-16T20:44:28.359849+00:00"
     },
     {
-      "run_id": "local-missing_import_dag4-20260916T174628Z",
+      "run_id": "local-missing_import_dag4-20260916T204428Z",
       "scenario_id": "missing_import_dag4",
       "dag_id": "dag4",
       "task_id": "score_engagement",
@@ -166,10 +166,10 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.631302+00:00"
+      "timestamp": "2026-09-16T20:44:28.387755+00:00"
     },
     {
-      "run_id": "local-partner_outage_dag5-20260916T174628Z",
+      "run_id": "local-partner_outage_dag5-20260916T204428Z",
       "scenario_id": "partner_outage_dag5",
       "dag_id": "dag5",
       "task_id": "call_partner_api",
@@ -197,10 +197,10 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.640685+00:00"
+      "timestamp": "2026-09-16T20:44:28.412579+00:00"
     },
     {
-      "run_id": "local-ambiguous_log_dag6-20260916T174628Z",
+      "run_id": "local-ambiguous_log_dag6-20260916T204428Z",
       "scenario_id": "ambiguous_log_dag6",
       "dag_id": "dag6",
       "task_id": "run_batch_job",
@@ -228,7 +228,7 @@
       },
       "pr_url": null,
       "mode": "local-scoring",
-      "timestamp": "2026-09-16T17:46:28.643126+00:00"
+      "timestamp": "2026-09-16T20:44:28.435302+00:00"
     }
   ]
 }
